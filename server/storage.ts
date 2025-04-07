@@ -7,6 +7,8 @@ import { projectInfluencers, type ProjectInfluencer, type InsertProjectInfluence
 import { publications, type Publication, type InsertPublication } from "@shared/schema";
 import { scenarios, type Scenario, type InsertScenario } from "@shared/schema";
 import { users, type User, type InsertUser } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -111,6 +113,7 @@ export class MemStorage implements IStorage {
       password: "password",
       name: "Алексей Смирнов",
       role: "manager",
+      profileImage: null,
       createdAt: new Date()
     };
     this.users.set(manager.id, manager);
@@ -122,6 +125,7 @@ export class MemStorage implements IStorage {
       password: "password",
       name: "Екатерина Котова",
       role: "influencer",
+      profileImage: null,
       createdAt: new Date()
     };
     this.users.set(influencer1.id, influencer1);
@@ -269,7 +273,12 @@ export class MemStorage implements IStorage {
 
   async createUser(user: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const newUser: User = { ...user, id, createdAt: new Date() };
+    const newUser: User = { 
+      ...user, 
+      id, 
+      profileImage: user.profileImage || null,
+      createdAt: new Date() 
+    } as User;
     this.users.set(id, newUser);
     return newUser;
   }
@@ -291,7 +300,7 @@ export class MemStorage implements IStorage {
 
   async createInfluencer(influencer: InsertInfluencer): Promise<Influencer> {
     const id = this.influencerIdCounter++;
-    const newInfluencer: Influencer = { ...influencer, id };
+    const newInfluencer: Influencer = { ...influencer, id } as Influencer;
     this.influencers.set(id, newInfluencer);
     return newInfluencer;
   }
@@ -504,4 +513,287 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
+  // Influencer operations
+  async getInfluencer(id: number): Promise<Influencer | undefined> {
+    const [influencer] = await db.select().from(influencers).where(eq(influencers.id, id));
+    return influencer || undefined;
+  }
+
+  async getInfluencerByUserId(userId: number): Promise<Influencer | undefined> {
+    const [influencer] = await db.select().from(influencers).where(eq(influencers.userId, userId));
+    return influencer || undefined;
+  }
+
+  async createInfluencer(insertInfluencer: InsertInfluencer): Promise<Influencer> {
+    const [influencer] = await db
+      .insert(influencers)
+      .values(insertInfluencer)
+      .returning();
+    return influencer;
+  }
+
+  async getInfluencers(): Promise<Influencer[]> {
+    return await db.select().from(influencers);
+  }
+
+  // Project operations
+  async getProject(id: number): Promise<Project | undefined> {
+    const [project] = await db.select().from(projects).where(eq(projects.id, id));
+    return project || undefined;
+  }
+
+  async getProjects(): Promise<Project[]> {
+    return await db.select().from(projects);
+  }
+
+  async createProject(insertProject: InsertProject): Promise<Project> {
+    const [project] = await db
+      .insert(projects)
+      .values(insertProject)
+      .returning();
+    return project;
+  }
+
+  async updateProject(id: number, projectUpdate: Partial<Project>): Promise<Project | undefined> {
+    const [updatedProject] = await db
+      .update(projects)
+      .set(projectUpdate)
+      .where(eq(projects.id, id))
+      .returning();
+    return updatedProject || undefined;
+  }
+
+  async getProjectsByManagerId(managerId: number): Promise<Project[]> {
+    return await db.select().from(projects).where(eq(projects.managerId, managerId));
+  }
+
+  // Project-Influencer operations
+  async getProjectInfluencer(projectId: number, influencerId: number): Promise<ProjectInfluencer | undefined> {
+    const [projectInfluencer] = await db
+      .select()
+      .from(projectInfluencers)
+      .where(
+        and(
+          eq(projectInfluencers.projectId, projectId),
+          eq(projectInfluencers.influencerId, influencerId)
+        )
+      );
+    return projectInfluencer || undefined;
+  }
+
+  async getProjectInfluencers(projectId: number): Promise<ProjectInfluencer[]> {
+    return await db
+      .select()
+      .from(projectInfluencers)
+      .where(eq(projectInfluencers.projectId, projectId));
+  }
+
+  async getInfluencerProjects(influencerId: number): Promise<ProjectInfluencer[]> {
+    return await db
+      .select()
+      .from(projectInfluencers)
+      .where(eq(projectInfluencers.influencerId, influencerId));
+  }
+
+  async createProjectInfluencer(insertProjectInfluencer: InsertProjectInfluencer): Promise<ProjectInfluencer> {
+    const [projectInfluencer] = await db
+      .insert(projectInfluencers)
+      .values(insertProjectInfluencer)
+      .returning();
+    return projectInfluencer;
+  }
+
+  async updateProjectInfluencer(id: number, update: Partial<ProjectInfluencer>): Promise<ProjectInfluencer | undefined> {
+    const [updatedPI] = await db
+      .update(projectInfluencers)
+      .set(update)
+      .where(eq(projectInfluencers.id, id))
+      .returning();
+    return updatedPI || undefined;
+  }
+
+  // Scenario operations
+  async getScenario(id: number): Promise<Scenario | undefined> {
+    const [scenario] = await db.select().from(scenarios).where(eq(scenarios.id, id));
+    return scenario || undefined;
+  }
+
+  async getScenariosByProject(projectId: number): Promise<Scenario[]> {
+    return await db
+      .select()
+      .from(scenarios)
+      .where(eq(scenarios.projectId, projectId));
+  }
+
+  async getScenariosByInfluencer(influencerId: number): Promise<Scenario[]> {
+    return await db
+      .select()
+      .from(scenarios)
+      .where(eq(scenarios.influencerId, influencerId));
+  }
+
+  async createScenario(insertScenario: InsertScenario): Promise<Scenario> {
+    const [scenario] = await db
+      .insert(scenarios)
+      .values(insertScenario)
+      .returning();
+    return scenario;
+  }
+
+  async updateScenario(id: number, update: Partial<Scenario>): Promise<Scenario | undefined> {
+    const [updatedScenario] = await db
+      .update(scenarios)
+      .set(update)
+      .where(eq(scenarios.id, id))
+      .returning();
+    return updatedScenario || undefined;
+  }
+
+  // Material operations
+  async getMaterial(id: number): Promise<Material | undefined> {
+    const [material] = await db.select().from(materials).where(eq(materials.id, id));
+    return material || undefined;
+  }
+
+  async getMaterialsByProject(projectId: number): Promise<Material[]> {
+    return await db
+      .select()
+      .from(materials)
+      .where(eq(materials.projectId, projectId));
+  }
+
+  async getMaterialsByInfluencer(influencerId: number): Promise<Material[]> {
+    return await db
+      .select()
+      .from(materials)
+      .where(eq(materials.influencerId, influencerId));
+  }
+
+  async createMaterial(insertMaterial: InsertMaterial): Promise<Material> {
+    const [material] = await db
+      .insert(materials)
+      .values(insertMaterial)
+      .returning();
+    return material;
+  }
+
+  async updateMaterial(id: number, update: Partial<Material>): Promise<Material | undefined> {
+    const [updatedMaterial] = await db
+      .update(materials)
+      .set(update)
+      .where(eq(materials.id, id))
+      .returning();
+    return updatedMaterial || undefined;
+  }
+
+  // Publication operations
+  async getPublication(id: number): Promise<Publication | undefined> {
+    const [publication] = await db.select().from(publications).where(eq(publications.id, id));
+    return publication || undefined;
+  }
+
+  async getPublicationsByProject(projectId: number): Promise<Publication[]> {
+    return await db
+      .select()
+      .from(publications)
+      .where(eq(publications.projectId, projectId));
+  }
+
+  async getPublicationsByInfluencer(influencerId: number): Promise<Publication[]> {
+    return await db
+      .select()
+      .from(publications)
+      .where(eq(publications.influencerId, influencerId));
+  }
+
+  async createPublication(insertPublication: InsertPublication): Promise<Publication> {
+    const [publication] = await db
+      .insert(publications)
+      .values(insertPublication)
+      .returning();
+    return publication;
+  }
+
+  async updatePublication(id: number, update: Partial<Publication>): Promise<Publication | undefined> {
+    const [updatedPublication] = await db
+      .update(publications)
+      .set(update)
+      .where(eq(publications.id, id))
+      .returning();
+    return updatedPublication || undefined;
+  }
+
+  // Comment operations
+  async getComment(id: number): Promise<Comment | undefined> {
+    const [comment] = await db.select().from(comments).where(eq(comments.id, id));
+    return comment || undefined;
+  }
+
+  async getCommentsByProject(projectId: number): Promise<Comment[]> {
+    return await db
+      .select()
+      .from(comments)
+      .where(eq(comments.projectId, projectId))
+      .orderBy(comments.createdAt);
+  }
+
+  async createComment(insertComment: InsertComment): Promise<Comment> {
+    const [comment] = await db
+      .insert(comments)
+      .values(insertComment)
+      .returning();
+    return comment;
+  }
+
+  // Activity operations
+  async getActivitiesByProject(projectId: number): Promise<Activity[]> {
+    return await db
+      .select()
+      .from(activities)
+      .where(eq(activities.projectId, projectId))
+      .orderBy(desc(activities.createdAt));
+  }
+
+  async getRecentActivities(limit: number): Promise<Activity[]> {
+    return await db
+      .select()
+      .from(activities)
+      .orderBy(desc(activities.createdAt))
+      .limit(limit);
+  }
+
+  async createActivity(insertActivity: InsertActivity): Promise<Activity> {
+    const [activity] = await db
+      .insert(activities)
+      .values(insertActivity)
+      .returning();
+    return activity;
+  }
+}
+
+// Initialize with MemStorage for development, switch to DatabaseStorage for production
+export const storage = new DatabaseStorage();
