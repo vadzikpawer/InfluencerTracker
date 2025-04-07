@@ -23,13 +23,18 @@ export function SocialIcon({ platform, className, size = "md", showBg = true }: 
     lg: "text-base",
   };
   
-  const Icon = {
-    instagram: FaInstagram,
-    tiktok: FaTiktok,
-    youtube: FaYoutube,
-    telegram: FaTelegram,
-    vk: FaVk,
-  }[platform];
+  const getIcon = (platform: SocialPlatform) => {
+    switch (platform) {
+      case "instagram": return FaInstagram;
+      case "tiktok": return FaTiktok;
+      case "youtube": return FaYoutube;
+      case "telegram": return FaTelegram;
+      case "vk": return FaVk;
+      default: return FaInstagram;
+    }
+  };
+  
+  const Icon = getIcon(platform);
 
   if (showBg) {
     return (

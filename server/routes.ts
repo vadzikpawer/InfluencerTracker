@@ -113,6 +113,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedProject = await storage.updateProject(id, req.body);
+      
+      // Create activity log if workflow stage is updated
+      if (req.body.workflowStage && req.body.workflowStage !== project.workflowStage) {
+        const userId = (req.user as any).id;
+        const stageNames = {
+          scenario: "Сценарий",
+          material: "Материалы",
+          publication: "Публикация"
+        };
+        
+        await storage.createActivity({
+          projectId: id,
+          userId,
+          activityType: "workflow_update",
+          description: `Проект перешел на этап: ${stageNames[req.body.workflowStage as keyof typeof stageNames]}`
+        });
+      }
+      
+      res.json(updatedProject);
+    } catch (error) {
+      res.status(400).json({ message: "Некорректные данные", error });
+    }
+  });
+  
+  // Endpoint to update project workflow stage
+  app.post("/api/projects/:id/workflow-stage", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { stage } = req.body;
+      
+      if (!stage || !["scenario", "material", "publication"].includes(stage)) {
+        return res.status(400).json({ message: "Некорректный этап проекта" });
+      }
+      
+      const project = await storage.getProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Проект не найден" });
+      }
+      
+      const updatedProject = await storage.updateProject(id, { workflowStage: stage });
+      
+      // Create activity log for the stage change
+      const userId = (req.user as any).id;
+      const stageNames = {
+        scenario: "Сценарий",
+        material: "Материалы",
+        publication: "Публикация"
+      };
+      
+      await storage.createActivity({
+        projectId: id,
+        userId,
+        activityType: "workflow_update",
+        description: `Проект перешел на этап: ${stageNames[stage as keyof typeof stageNames]}`
+      });
+      
       res.json(updatedProject);
     } catch (error) {
       res.status(400).json({ message: "Некорректные данные", error });

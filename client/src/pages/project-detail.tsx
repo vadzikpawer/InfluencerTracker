@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,12 +9,16 @@ import { SocialIcon } from "@/components/ui/social-icon";
 import { Timeline } from "@/components/ui/timeline";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Comments } from "@/components/ui/comments-section";
-import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus } from "lucide-react";
-import { Link } from "wouter";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus, ChevronRight } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Project, Activity, Comment, Influencer } from "@shared/schema";
 
 interface ProjectDetailProps {
   id: string;
@@ -22,22 +26,46 @@ interface ProjectDetailProps {
 
 export default function ProjectDetail({ id }: ProjectDetailProps) {
   const { t } = useTranslation();
+  const { toast } = useToast();
+  const [_, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"scenario" | "material" | "publication">("scenario");
   
-  const { data: project, isLoading: isLoadingProject } = useQuery({
+  const { data: project = {} as Project, isLoading: isLoadingProject } = useQuery<Project>({
     queryKey: [`/api/projects/${id}`],
   });
   
-  const { data: influencers, isLoading: isLoadingInfluencers } = useQuery({
+  const { data: influencers = [] as Influencer[], isLoading: isLoadingInfluencers } = useQuery<Influencer[]>({
     queryKey: [`/api/projects/${id}/influencers`],
   });
   
-  const { data: comments, isLoading: isLoadingComments } = useQuery({
+  const { data: comments = [] as Comment[], isLoading: isLoadingComments } = useQuery<Comment[]>({
     queryKey: [`/api/projects/${id}/comments`],
   });
   
-  const { data: activities, isLoading: isLoadingActivities } = useQuery({
+  const { data: activities = [] as Activity[], isLoading: isLoadingActivities } = useQuery<Activity[]>({
     queryKey: [`/api/projects/${id}/activities`],
+  });
+  
+  const updateWorkflowStageMutation = useMutation({
+    mutationFn: async (stage: string) => {
+      const res = await apiRequest("POST", `/api/projects/${id}/workflow-stage`, { stage });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/activities`] });
+      toast({
+        title: t("workflow_updated"),
+        description: t("project_stage_changed"),
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: t("error"),
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoadingProject) {
@@ -116,7 +144,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     timelineItems.push(
       {
         title: 'project_created',
-        date: project.createdAt,
+        date: formatDate(project.createdAt),
         status: 'completed'
       }
     );
@@ -164,7 +192,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
             </Link>
           </Button>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           <StatusBadge status={project.status as any} />
           <StatusBadge 
             status="draft" 
@@ -178,6 +206,28 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
               className="bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300" 
             />
           )}
+          
+          <div className="ml-auto flex items-center">
+            <span className="text-sm mr-2">{t('stage')}:</span>
+            <Select 
+              value={project.workflowStage} 
+              onValueChange={(value) => updateWorkflowStageMutation.mutate(value)}
+              disabled={updateWorkflowStageMutation.isPending}
+            >
+              <SelectTrigger className="w-36 h-9 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/50">
+                <SelectValue>
+                  {project.workflowStage === 'scenario' && t('scenario')}
+                  {project.workflowStage === 'material' && t('material')}
+                  {project.workflowStage === 'publication' && t('publication')}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="scenario">{t('scenario')}</SelectItem>
+                <SelectItem value="material">{t('material')}</SelectItem>
+                <SelectItem value="publication">{t('publication')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -228,7 +278,13 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                   
                   <div className="flex justify-between items-center text-sm">
                     <div className="text-neutral-500 dark:text-neutral-400">{t('last_updated')}: 20.05.2023</div>
-                    <Button variant="link" className="text-primary p-0">{t('edit')}</Button>
+                    <Button 
+                      variant="link" 
+                      className="text-primary p-0" 
+                      asChild
+                    >
+                      <Link href={`/projects/${id}/edit`}>{t('edit')}</Link>
+                    </Button>
                   </div>
                 </Card>
                 
@@ -245,7 +301,10 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                     <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4 max-w-md">
                       {t('scenario_description')}
                     </p>
-                    <Button className="bg-primary text-white">
+                    <Button 
+                      className="bg-primary text-white"
+                      onClick={() => navigate(`/projects/${id}/scenario/new`)}
+                    >
                       {t('create_scenario')}
                     </Button>
                   </div>
