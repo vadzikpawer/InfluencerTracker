@@ -22,6 +22,7 @@ const formSchema = insertProjectSchema.extend({
   title: z.string().min(1, { message: "Название проекта обязательно" }),
   client: z.string().min(1, { message: "Название клиента обязательно" }),
   platforms: z.array(z.string()).optional(),
+  keyRequirements: z.array(z.string()).optional(),
   technicalLinks: z.array(z.object({
     title: z.string(),
     url: z.string().url({ message: "Введите корректный URL" })
@@ -49,12 +50,14 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
   const [location, navigate] = useLocation();
   const { user } = useAuth();
   const [technicalLinkInput, setTechnicalLinkInput] = useState({ title: "", url: "" });
+  const [keyRequirementInput, setKeyRequirementInput] = useState("");
 
   // Default values depend on whether we're creating or editing
   const defaultValues: Partial<FormValues> = {
     title: project?.title || "",
     client: project?.client || "",
     description: project?.description || "",
+    keyRequirements: project?.keyRequirements || [],
     platforms: project?.platforms || [],
     budget: project?.budget || undefined,
     erid: project?.erid || "",
@@ -149,6 +152,19 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
     const currentLinks = form.getValues("technicalLinks") || [];
     form.setValue("technicalLinks", currentLinks.filter((_, i) => i !== index));
   }
+  
+  function addKeyRequirement() {
+    if (!keyRequirementInput) return;
+    
+    const currentRequirements = form.getValues("keyRequirements") || [];
+    form.setValue("keyRequirements", [...currentRequirements, keyRequirementInput]);
+    setKeyRequirementInput("");
+  }
+  
+  function removeKeyRequirement(index: number) {
+    const currentRequirements = form.getValues("keyRequirements") || [];
+    form.setValue("keyRequirements", currentRequirements.filter((_, i) => i !== index));
+  }
 
   return (
     <Card className="bg-white dark:bg-neutral-900/30 p-6 shadow-sm border border-neutral-200/50 dark:border-neutral-800/50">
@@ -216,6 +232,43 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
               </FormItem>
             )}
           />
+          
+          <div>
+            <h3 className="text-base font-medium mb-2">{t("key_requirements")}</h3>
+            <div className="flex items-end gap-2 mb-4">
+              <div className="flex-1">
+                <Input
+                  placeholder={t("enter_key_requirement")}
+                  value={keyRequirementInput}
+                  onChange={(e) => setKeyRequirementInput(e.target.value)}
+                />
+              </div>
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={addKeyRequirement}
+              >
+                {t("add")}
+              </Button>
+            </div>
+            
+            {/* Display key requirements */}
+            <div className="space-y-2">
+              {form.watch("keyRequirements")?.map((requirement, index) => (
+                <div key={index} className="flex items-center justify-between bg-neutral-100/50 dark:bg-neutral-900/50 p-2 rounded-md">
+                  <div className="font-medium">{requirement}</div>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => removeKeyRequirement(index)}
+                  >
+                    {t("remove")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField

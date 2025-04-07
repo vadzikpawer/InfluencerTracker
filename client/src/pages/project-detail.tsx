@@ -216,12 +216,15 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                   </p>
                   
                   <h4 className="font-medium mb-2">{t('key_requirements')}:</h4>
-                  <ul className="list-disc list-inside text-sm text-neutral-800/80 dark:text-neutral-200/80 space-y-1 mb-4">
-                    <li>Акцент на удобство планирования путешествий</li>
-                    <li>Демонстрация функций бронирования отелей и авиабилетов</li>
-                    <li>Упоминание скидочного кода для подписчиков: TRAVEL2023</li>
-                    <li>Показать мобильный интерфейс приложения в процессе использования</li>
-                  </ul>
+                  {project.keyRequirements && project.keyRequirements.length > 0 ? (
+                    <ul className="list-disc list-inside text-sm text-neutral-800/80 dark:text-neutral-200/80 space-y-1 mb-4">
+                      {project.keyRequirements.map((requirement, index) => (
+                        <li key={index}>{requirement}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 italic mb-4">{t('no_key_requirements')}</p>
+                  )}
                   
                   <div className="flex justify-between items-center text-sm">
                     <div className="text-neutral-500 dark:text-neutral-400">{t('last_updated')}: 20.05.2023</div>
@@ -233,36 +236,27 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                 <Card className="bg-white dark:bg-neutral-900/30 shadow-sm border border-neutral-200/50 dark:border-neutral-800/50 p-4 mb-6">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-lg font-bold font-sf-pro">{t('scenario')}</h3>
-                    <StatusBadge status="approved" />
+                    <StatusBadge status={project.workflowStage === 'scenario' ? 'pending' : 'completed'} />
                   </div>
                   
-                  <Card className="border border-neutral-200/50 dark:border-neutral-800/50 rounded-lg p-3 bg-neutral-100/50 dark:bg-neutral-900/50 mb-4">
-                    <p className="text-sm text-neutral-800/80 dark:text-neutral-200/80 whitespace-pre-line">
-                      1. Приветствие и представление приложения TravelBuddy<br />
-                      2. Краткий рассказ о планировании предстоящего отпуска<br />
-                      3. Демонстрация поиска и бронирования отеля через приложение<br />
-                      4. Демонстрация поиска и бронирования авиабилетов<br />
-                      5. Показ функции сохранения билетов и бронирований в личном кабинете<br />
-                      6. Упоминание уникального скидочного кода TRAVEL2023<br />
-                      7. Призыв к действию: скачать приложение в App Store и Google Play
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <FileText className="h-12 w-12 text-neutral-400 mb-4" />
+                    <h4 className="text-base font-medium mb-2">{t('create_scenario')}</h4>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4 max-w-md">
+                      {t('scenario_description')}
                     </p>
-                  </Card>
+                    <Button className="bg-primary text-white">
+                      {t('create_scenario')}
+                    </Button>
+                  </div>
                   
-                  <div className="flex items-center justify-between text-sm">
-                    <div>
-                      <span className="text-neutral-500 dark:text-neutral-400">{t('approved')}:</span>
-                      <span className="ml-1">22.05.2023</span>
-                    </div>
-                    
-                    <div className="flex">
-                      <Button variant="link" className="text-primary text-sm p-0 mr-3">{t('version_history')}</Button>
-                      <Button 
-                        className="bg-primary text-white text-sm"
-                        onClick={() => setActiveTab('material')}
-                      >
-                        {t('proceed_to_materials')}
-                      </Button>
-                    </div>
+                  <div className="flex items-center justify-end text-sm mt-4">
+                    <Button 
+                      className="bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 text-sm"
+                      onClick={() => setActiveTab('material')}
+                    >
+                      {t('view_materials')}
+                    </Button>
                   </div>
                 </Card>
                 

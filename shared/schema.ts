@@ -45,6 +45,7 @@ export const projects = pgTable("projects", {
   title: text("title").notNull(),
   client: text("client").notNull(),
   description: text("description"),
+  keyRequirements: json("key_requirements").$type<string[]>(),
   startDate: timestamp("start_date").defaultNow().notNull(),
   deadline: timestamp("deadline"),
   status: text("status", { enum: ["draft", "active", "completed"] }).default("draft").notNull(),
