@@ -10,8 +10,10 @@ import { Timeline } from "@/components/ui/timeline";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Comments } from "@/components/ui/comments-section";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { AddInfluencerForm } from "@/components/forms/add-influencer-form";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -29,6 +31,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const { toast } = useToast();
   const [_, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"scenario" | "material" | "publication">("scenario");
+  const [addInfluencerDialogOpen, setAddInfluencerDialogOpen] = useState(false);
   
   const { data: project = {} as Project, isLoading: isLoadingProject } = useQuery<Project>({
     queryKey: [`/api/projects/${id}`],
@@ -144,7 +147,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     timelineItems.push(
       {
         title: 'project_created',
-        date: formatDate(project.createdAt),
+        date: project.createdAt,
         status: 'completed'
       }
     );
@@ -152,7 +155,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     if (project.workflowStage === 'scenario' || project.workflowStage === 'material' || project.workflowStage === 'publication') {
       timelineItems.push({
         title: 'scenario_phase',
-        date: project.workflowStage === 'scenario' ? t('current') : t('completed'),
+        date: new Date(),
         status: project.workflowStage === 'scenario' ? 'active' : 'completed'
       });
     }
@@ -160,7 +163,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     if (project.workflowStage === 'material' || project.workflowStage === 'publication') {
       timelineItems.push({
         title: 'material_phase',
-        date: project.workflowStage === 'material' ? t('current') : t('completed'),
+        date: new Date(),
         status: project.workflowStage === 'material' ? 'active' : 'completed'
       });
     }
@@ -168,7 +171,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     if (project.workflowStage === 'publication') {
       timelineItems.push({
         title: 'publication_phase',
-        date: t('current'),
+        date: new Date(),
         status: 'active'
       });
     }
@@ -303,7 +306,29 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                     </p>
                     <Button 
                       className="bg-primary text-white"
-                      onClick={() => navigate(`/projects/${id}/scenario/new`)}
+                      onClick={() => {
+                        const createScenarioEndpoint = `/api/projects/${id}/scenarios`;
+                        apiRequest("POST", createScenarioEndpoint, {
+                          projectId: Number(id),
+                          content: t('new_scenario_content'),
+                          status: "draft"
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                          queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/scenarios`] });
+                          toast({
+                            title: t('scenario_created'),
+                            description: t('scenario_created_success'),
+                          });
+                        })
+                        .catch(error => {
+                          toast({
+                            title: t('error'),
+                            description: error.message,
+                            variant: "destructive"
+                          });
+                        });
+                      }}
                     >
                       {t('create_scenario')}
                     </Button>
@@ -381,9 +406,28 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                 <Card className="bg-white dark:bg-neutral-900/30 shadow-sm border border-neutral-200/50 dark:border-neutral-800/50 p-4">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-lg font-bold font-sf-pro">{t('influencers')}</h3>
-                    <Button variant="link" className="text-primary text-sm p-0">
-                      <Plus className="h-4 w-4 mr-1" /> {t('add')}
-                    </Button>
+                    <Dialog open={addInfluencerDialogOpen} onOpenChange={setAddInfluencerDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="link" className="text-primary text-sm p-0">
+                          <Plus className="h-4 w-4 mr-1" /> {t('add')}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>{t('add_influencer_to_project')}</DialogTitle>
+                          <DialogDescription>
+                            {t('add_influencer_description')}
+                          </DialogDescription>
+                        </DialogHeader>
+                        <AddInfluencerForm 
+                          projectId={Number(id)}
+                          onSuccess={() => {
+                            queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/influencers`] });
+                            setAddInfluencerDialogOpen(false);
+                          }}
+                        />
+                      </DialogContent>
+                    </Dialog>
                   </div>
                   
                   {isLoadingInfluencers ? (
