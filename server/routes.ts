@@ -3,7 +3,14 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { insertUserSchema, insertInfluencerSchema, insertProjectSchema, insertCommentSchema, insertActivitySchema } from "@shared/schema";
+import { 
+  insertUserSchema, 
+  insertInfluencerSchema, 
+  insertProjectSchema, 
+  insertCommentSchema, 
+  insertActivitySchema,
+  insertScenarioSchema 
+} from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication with session and password hashing
@@ -75,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           title: '',
           client: '',
           description: '',
-          status: 'draft',
+          status: 'active',
           workflowStage: 'scenario',
           budget: null,
           erid: null,
@@ -422,6 +429,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: "Ошибка сервера", error });
+    }
+  });
+
+  // Scenario routes
+  app.get("/api/projects/:id/scenarios", isAuthenticated, async (req, res) => {
+    try {
+      // Special case for "new" route
+      if (req.params.id === 'new') {
+        return res.json([]);
+      }
+      
+      const projectId = Number(req.params.id);
+      const scenarios = await storage.getScenariosByProject(projectId);
+      
+      res.json(scenarios);
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка сервера", error });
+    }
+  });
+
+  app.post("/api/projects/:id/scenarios", isAuthenticated, async (req, res) => {
+    try {
+      // Make sure id is not 'new' for POST requests
+      if (req.params.id === 'new') {
+        return res.status(400).json({ message: "Недопустимый ID проекта" });
+      }
+      
+      const projectId = Number(req.params.id);
+      const project = await storage.getProject(projectId);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Проект не найден" });
+      }
+      
+      // Get project influencers to select the first one
+      const projectInfluencers = await storage.getProjectInfluencers(projectId);
+      
+      if (projectInfluencers.length === 0) {
+        return res.status(400).json({ message: "Необходимо добавить инфлюенсеров к проекту перед созданием сценария" });
+      }
+      
+      // Use the first influencer for this scenario
+      const influencerId = projectInfluencers[0].influencerId;
+      
+      const scenarioData = insertScenarioSchema.parse({
+        ...req.body,
+        projectId,
+        influencerId
+      });
+      
+      const scenario = await storage.createScenario(scenarioData);
+      
+      // Create activity for scenario creation
+      const userId = (req.user as any).id;
+      await storage.createActivity({
+        projectId,
+        userId,
+        activityType: "scenario_create",
+        description: "Создан новый сценарий"
+      });
+      
+      res.status(201).json(scenario);
+    } catch (error) {
+      res.status(400).json({ message: "Некорректные данные", error });
     }
   });
 

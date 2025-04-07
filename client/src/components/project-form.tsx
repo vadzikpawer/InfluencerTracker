@@ -63,7 +63,7 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
     erid: project?.erid || "",
     managerId: user?.role === "manager" ? user?.id : project?.managerId || null,
     technicalLinks: project?.technicalLinks || [],
-    status: "draft",
+    status: "active",
     workflowStage: "scenario"
   };
 

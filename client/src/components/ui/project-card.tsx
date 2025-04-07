@@ -22,7 +22,6 @@ interface ProjectCardProps {
   actionRequired?: {
     required: boolean;
     message?: string;
-    urgent?: boolean;
   };
   influencers?: { initials: string; name: string }[];
   className?: string;
@@ -90,13 +89,6 @@ export function ProjectCard({
 
   return (
     <Card className={`p-4 relative overflow-hidden border border-neutral-200/50 dark:border-neutral-800/50 ${className}`}>
-      {actionRequired?.urgent && (
-        <div className="absolute top-0 right-0 w-16 h-16">
-          <div className="absolute transform rotate-45 bg-warning text-white text-xs font-medium py-1 right-[-40px] top-[20px] w-[170px] text-center">
-            {t("urgent")}
-          </div>
-        </div>
-      )}
 
       <div className="flex justify-between items-start mb-3">
         <div>
