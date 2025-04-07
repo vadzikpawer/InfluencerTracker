@@ -139,6 +139,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/projects/:id", isAuthenticated, async (req, res) => {
     try {
+      // Special case for "new" route - return empty template
+      if (req.params.id === 'new') {
+        return res.json({
+          title: '',
+          client: '',
+          description: '',
+          status: 'draft',
+          workflowStage: 'scenario',
+          budget: null,
+          erid: null,
+          platforms: [],
+          technicalLinks: []
+        });
+      }
+      
       const project = await storage.getProject(Number(req.params.id));
       if (!project) {
         return res.status(404).json({ message: "Проект не найден" });
@@ -177,6 +192,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Project influencers
   app.get("/api/projects/:id/influencers", isAuthenticated, async (req, res) => {
     try {
+      // Special case for "new" route
+      if (req.params.id === 'new') {
+        return res.json([]);
+      }
+      
       const projectId = Number(req.params.id);
       const projectInfluencers = await storage.getProjectInfluencers(projectId);
       const influencerIds = projectInfluencers.map(pi => pi.influencerId);
@@ -194,6 +214,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Comments
   app.get("/api/projects/:id/comments", isAuthenticated, async (req, res) => {
     try {
+      // Special case for "new" route
+      if (req.params.id === 'new') {
+        return res.json([]);
+      }
+      
       const projectId = Number(req.params.id);
       const comments = await storage.getCommentsByProject(projectId);
       
@@ -216,6 +241,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/projects/:id/comments", isAuthenticated, async (req, res) => {
     try {
+      // Make sure id is not 'new' for POST requests
+      if (req.params.id === 'new') {
+        return res.status(400).json({ message: "Недопустимый ID проекта" });
+      }
+      
       const projectId = Number(req.params.id);
       const userId = (req.user as any).id;
       
@@ -265,6 +295,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/projects/:id/activities", isAuthenticated, async (req, res) => {
     try {
+      // Special case for "new" route
+      if (req.params.id === 'new') {
+        return res.json([]);
+      }
+      
       const projectId = Number(req.params.id);
       const activities = await storage.getActivitiesByProject(projectId);
       
@@ -288,6 +323,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/projects/:id/activities", isAuthenticated, async (req, res) => {
     try {
+      // Make sure id is not 'new' for POST requests
+      if (req.params.id === 'new') {
+        return res.status(400).json({ message: "Недопустимый ID проекта" });
+      }
+      
       const projectId = Number(req.params.id);
       const userId = (req.user as any).id;
       
