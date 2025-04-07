@@ -149,13 +149,20 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   return (
     <PageContainer>
       <div className="mb-6">
-        <div className="flex items-center mb-2">
-          <Button variant="link" className="text-primary p-0 mr-2" asChild>
-            <Link href="/projects">
-              <ArrowLeft className="h-4 w-4" />
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center">
+            <Button variant="link" className="text-primary p-0 mr-2" asChild>
+              <Link href="/projects">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </Button>
+            <h1 className="text-2xl font-bold font-sf-pro">{project.title}</h1>
+          </div>
+          <Button variant="outline" className="text-primary" asChild>
+            <Link href={`/projects/${id}/edit`}>
+              {t("edit_project")}
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold font-sf-pro">{project.title}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           <StatusBadge status={project.status as any} />

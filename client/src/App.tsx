@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Projects from "@/pages/projects";
 import ProjectDetail from "@/pages/project-detail";
+import ProjectFormPage from "@/pages/project-form-page";
 import InfluencerDashboard from "@/pages/influencer-dashboard";
 import Influencers from "@/pages/influencers";
 import Login from "@/pages/login";
@@ -44,6 +45,14 @@ function Router() {
       
       <Route path="/projects">
         <ProtectedRoute component={Projects} />
+      </Route>
+      
+      <Route path="/projects/new">
+        <ProtectedRoute component={ProjectFormPage} id="new" />
+      </Route>
+      
+      <Route path="/projects/:id/edit">
+        {(params) => <ProtectedRoute component={ProjectFormPage} id={params.id} />}
       </Route>
       
       <Route path="/projects/:id">
