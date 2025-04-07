@@ -320,7 +320,15 @@ export class MemStorage implements IStorage {
 
   async createProject(project: InsertProject): Promise<Project> {
     const id = this.projectIdCounter++;
-    const newProject: Project = { ...project, id, createdAt: new Date() };
+    const newProject: Project = { 
+      ...project, 
+      id, 
+      status: project.status || 'draft',
+      workflowStage: project.workflowStage || 'scenario',
+      description: project.description || null,
+      platforms: project.platforms || null,
+      createdAt: new Date() 
+    } as Project;
     this.projects.set(id, newProject);
     return newProject;
   }
@@ -361,7 +369,16 @@ export class MemStorage implements IStorage {
 
   async createProjectInfluencer(projectInfluencer: InsertProjectInfluencer): Promise<ProjectInfluencer> {
     const id = this.projectInfluencerIdCounter++;
-    const newProjectInfluencer: ProjectInfluencer = { ...projectInfluencer, id };
+    const newProjectInfluencer: ProjectInfluencer = { 
+      ...projectInfluencer, 
+      id,
+      scenarioStatus: projectInfluencer.scenarioStatus || 'pending',
+      materialStatus: projectInfluencer.materialStatus || 'pending',
+      publicationStatus: projectInfluencer.publicationStatus || 'pending',
+      scenarioCompletedAt: projectInfluencer.scenarioCompletedAt || null,
+      materialCompletedAt: projectInfluencer.materialCompletedAt || null,
+      publicationCompletedAt: projectInfluencer.publicationCompletedAt || null
+    } as ProjectInfluencer;
     this.projectInfluencers.set(id, newProjectInfluencer);
     return newProjectInfluencer;
   }
@@ -571,9 +588,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProject(insertProject: InsertProject): Promise<Project> {
+    // Ensure all required fields have proper values
+    const formattedData = {
+      ...insertProject,
+      status: insertProject.status || 'draft',
+      workflowStage: insertProject.workflowStage || 'scenario',
+      description: insertProject.description || null,
+      platforms: Array.isArray(insertProject.platforms) ? insertProject.platforms : null,
+      deadline: insertProject.deadline || null,
+      budget: insertProject.budget || null,
+      erid: insertProject.erid || null,
+      managerId: insertProject.managerId || null,
+      technicalLinks: insertProject.technicalLinks || null
+    };
+    
     const [project] = await db
       .insert(projects)
-      .values(insertProject)
+      .values(formattedData)
       .returning();
     return project;
   }
@@ -620,9 +651,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createProjectInfluencer(insertProjectInfluencer: InsertProjectInfluencer): Promise<ProjectInfluencer> {
+    // Ensure all required fields have proper values
+    const formattedData = {
+      ...insertProjectInfluencer,
+      scenarioStatus: insertProjectInfluencer.scenarioStatus || 'pending',
+      materialStatus: insertProjectInfluencer.materialStatus || 'pending',
+      publicationStatus: insertProjectInfluencer.publicationStatus || 'pending',
+      scenarioCompletedAt: insertProjectInfluencer.scenarioCompletedAt || null,
+      materialCompletedAt: insertProjectInfluencer.materialCompletedAt || null,
+      publicationCompletedAt: insertProjectInfluencer.publicationCompletedAt || null
+    };
+    
     const [projectInfluencer] = await db
       .insert(projectInfluencers)
-      .values(insertProjectInfluencer)
+      .values(formattedData)
       .returning();
     return projectInfluencer;
   }
@@ -657,9 +699,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createScenario(insertScenario: InsertScenario): Promise<Scenario> {
+    // Ensure all required fields have proper values
+    const formattedData = {
+      ...insertScenario,
+      status: insertScenario.status || 'draft',
+      submittedAt: insertScenario.submittedAt || null,
+      approvedAt: insertScenario.approvedAt || null,
+      version: insertScenario.version || 1
+    };
+    
     const [scenario] = await db
       .insert(scenarios)
-      .values(insertScenario)
+      .values(formattedData)
       .returning();
     return scenario;
   }
@@ -694,9 +745,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMaterial(insertMaterial: InsertMaterial): Promise<Material> {
+    // Ensure all required fields have proper values
+    const formattedData = {
+      ...insertMaterial,
+      status: insertMaterial.status || 'draft',
+      description: insertMaterial.description || null,
+      submittedAt: insertMaterial.submittedAt || null,
+      approvedAt: insertMaterial.approvedAt || null
+    };
+    
     const [material] = await db
       .insert(materials)
-      .values(insertMaterial)
+      .values(formattedData)
       .returning();
     return material;
   }
@@ -731,9 +791,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPublication(insertPublication: InsertPublication): Promise<Publication> {
+    // Ensure all required fields have proper values
+    const formattedData = {
+      ...insertPublication,
+      status: insertPublication.status || 'published',
+      verifiedAt: insertPublication.verifiedAt || null
+    };
+    
     const [publication] = await db
       .insert(publications)
-      .values(insertPublication)
+      .values(formattedData)
       .returning();
     return publication;
   }
@@ -787,9 +854,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createActivity(insertActivity: InsertActivity): Promise<Activity> {
+    // Ensure all required fields have proper values
+    const formattedData = {
+      ...insertActivity,
+      userId: insertActivity.userId || null
+    };
+    
     const [activity] = await db
       .insert(activities)
-      .values(insertActivity)
+      .values(formattedData)
       .returning();
     return activity;
   }

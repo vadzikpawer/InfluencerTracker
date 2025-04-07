@@ -9,7 +9,7 @@ import { SocialIcon } from "@/components/ui/social-icon";
 import { Timeline } from "@/components/ui/timeline";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Comments } from "@/components/ui/comments-section";
-import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip } from "lucide-react";
+import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
