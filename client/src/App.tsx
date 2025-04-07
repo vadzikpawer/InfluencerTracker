@@ -11,12 +11,14 @@ import Influencers from "@/pages/influencers";
 import Login from "@/pages/login";
 import { AuthProvider } from "@/contexts/auth-context";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "react-i18next";
 
 function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType<any>, [key: string]: any }) {
   const { user, isLoading } = useAuth();
+  const { t } = useTranslation();
   
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Загрузка...</div>;
+    return <div className="min-h-screen flex items-center justify-center">{t("loading")}</div>;
   }
   
   if (!user) {
