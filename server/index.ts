@@ -1,6 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { db } from "./db";
+import { users } from "@shared/schema";
+import { hashPassword } from "./auth";
+import { eq } from "drizzle-orm";
 
 const app = express();
 app.use(express.json());
@@ -36,7 +40,38 @@ app.use((req, res, next) => {
   next();
 });
 
+// Function to hash existing plain text passwords
+async function hashExistingPasswords() {
+  try {
+    console.log("Checking for passwords that need hashing...");
+    
+    // Get all users
+    const existingUsers = await db.select().from(users);
+    
+    // Loop through each user and hash their password if it's not already hashed
+    for (const user of existingUsers) {
+      // Check if password is already hashed (contains a dot separator)
+      if (!user.password.includes('.')) {
+        console.log(`Hashing password for user ${user.username}`);
+        const hashedPassword = await hashPassword(user.password);
+        
+        // Update the user's password in the database
+        await db.update(users)
+          .set({ password: hashedPassword })
+          .where(eq(users.id, user.id));
+      }
+    }
+    
+    console.log("Password check complete!");
+  } catch (error) {
+    console.error("Error checking passwords:", error);
+  }
+}
+
 (async () => {
+  // Hash existing passwords before starting the server
+  await hashExistingPasswords();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

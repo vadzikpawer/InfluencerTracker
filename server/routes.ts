@@ -1,83 +1,13 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth } from "./auth";
 import { insertUserSchema, insertInfluencerSchema, insertProjectSchema, insertCommentSchema, insertActivitySchema } from "@shared/schema";
-import session from "express-session";
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
-import MemoryStore from "memorystore";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Configure session
-  const MemoryStoreSession = MemoryStore(session);
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || "influencer-marketing-platform-secret",
-      resave: false,
-      saveUninitialized: false,
-      cookie: { secure: process.env.NODE_ENV === "production", maxAge: 86400000 }, // 24 hours
-      store: new MemoryStoreSession({
-        checkPeriod: 86400000, // prune expired entries every 24h
-      }),
-    })
-  );
-
-  // Configure passport
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const user = await storage.getUserByUsername(username);
-        if (!user) {
-          return done(null, false, { message: "Неверное имя пользователя" });
-        }
-        
-        // Simple password check for demo (in a real app would use bcrypt)
-        if (user.password !== password) {
-          return done(null, false, { message: "Неверный пароль" });
-        }
-        
-        return done(null, user);
-      } catch (error) {
-        return done(error);
-      }
-    })
-  );
-
-  passport.serializeUser((user: any, done) => {
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: number, done) => {
-    try {
-      const user = await storage.getUser(id);
-      done(null, user);
-    } catch (error) {
-      done(error);
-    }
-  });
-
-  // Authentication routes
-  app.post("/api/auth/login", passport.authenticate("local"), (req, res) => {
-    res.json({ user: req.user });
-  });
-
-  app.post("/api/auth/logout", (req, res) => {
-    req.logout(() => {
-      res.json({ success: true });
-    });
-  });
-
-  app.get("/api/auth/user", (req, res) => {
-    if (req.isAuthenticated()) {
-      res.json({ user: req.user });
-    } else {
-      res.status(401).json({ message: "Не авторизован" });
-    }
-  });
+  // Setup authentication with session and password hashing
+  setupAuth(app);
 
   // Middleware to check if user is authenticated
   const isAuthenticated = (req: Request, res: Response, next: Function) => {
@@ -338,7 +268,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const activity = await storage.createActivity(activityData);
-      const user = await storage.getUser(activity.userId);
+      
+      // Handle nullable userId since the field can be null in the schema
+      let user = undefined;
+      if (activity.userId !== null && activity.userId !== undefined) {
+        user = await storage.getUser(activity.userId);
+      }
       
       res.status(201).json({
         ...activity,

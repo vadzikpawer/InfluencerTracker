@@ -6,7 +6,7 @@ import { ru } from "date-fns/locale";
 interface TimelineItem {
   title: string;
   description?: string;
-  date: Date | string;
+  date: Date | string | null | undefined;
   status: "completed" | "active" | "pending";
 }
 
@@ -29,9 +29,17 @@ export function Timeline({ items, className }: TimelineProps) {
     }
   };
   
-  const formatDate = (date: Date | string) => {
+  const formatDate = (date: Date | string | null | undefined) => {
+    if (!date) return ""; // Handle null or undefined
     if (typeof date === "string") return date;
-    return format(date, "dd.MM.yyyy, HH:mm", { locale: ru });
+    
+    // Ensure date is valid before formatting
+    try {
+      return format(new Date(date), "dd.MM.yyyy, HH:mm", { locale: ru });
+    } catch (error) {
+      console.error("Invalid date:", date);
+      return "";
+    }
   };
 
   return (
