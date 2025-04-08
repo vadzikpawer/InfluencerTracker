@@ -103,10 +103,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/projects", isAuthenticated, async (req, res) => {
     try {
-      const projectData = insertProjectSchema.parse(req.body);
+      // Process dates correctly
+      const data = {
+        ...req.body,
+        deadline: req.body.deadline ? new Date(req.body.deadline) : null,
+        scenarioDeadline: req.body.scenarioDeadline ? new Date(req.body.scenarioDeadline) : null,
+        materialDeadline: req.body.materialDeadline ? new Date(req.body.materialDeadline) : null,
+        publicationDeadline: req.body.publicationDeadline ? new Date(req.body.publicationDeadline) : null,
+      };
+      
+      const projectData = insertProjectSchema.parse(data);
       const project = await storage.createProject(projectData);
       res.status(201).json(project);
     } catch (error) {
+      console.error("Project creation error:", error);
       res.status(400).json({ message: "Некорректные данные", error });
     }
   });
@@ -119,7 +129,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Проект не найден" });
       }
       
-      const updatedProject = await storage.updateProject(id, req.body);
+      // Process dates correctly
+      const data = {
+        ...req.body,
+        deadline: req.body.deadline ? new Date(req.body.deadline) : null,
+        scenarioDeadline: req.body.scenarioDeadline ? new Date(req.body.scenarioDeadline) : null,
+        materialDeadline: req.body.materialDeadline ? new Date(req.body.materialDeadline) : null,
+        publicationDeadline: req.body.publicationDeadline ? new Date(req.body.publicationDeadline) : null,
+      };
+      
+      const updatedProject = await storage.updateProject(id, data);
       
       // Create activity log if workflow stage is updated
       if (req.body.workflowStage && req.body.workflowStage !== project.workflowStage) {
@@ -153,6 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(updatedProject);
     } catch (error) {
+      console.error("Project update error:", error);
       res.status(400).json({ message: "Некорректные данные", error });
     }
   });
@@ -586,10 +606,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use the first influencer for this scenario
       const influencerId = projectInfluencers[0].influencerId;
       
+      // Process deadline date correctly
       const scenarioData = insertScenarioSchema.parse({
         ...req.body,
         projectId,
-        influencerId
+        influencerId,
+        deadline: req.body.deadline ? new Date(req.body.deadline) : null
       });
       
       const scenario = await storage.createScenario(scenarioData);
@@ -678,11 +700,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Сценарий не принадлежит указанному проекту" });
       }
       
-      // Update the scenario status
-      const updatedScenario = await storage.updateScenario(scenarioId, {
+      // Process any deadline updates
+      const updateData = {
         status: "approved",
-        approvedAt: new Date()
-      });
+        approvedAt: new Date(),
+        deadline: req.body.deadline ? new Date(req.body.deadline) : undefined
+      };
+      
+      // Update the scenario
+      const updatedScenario = await storage.updateScenario(scenarioId, updateData);
       
       // Log the activity
       await storage.createActivity({
