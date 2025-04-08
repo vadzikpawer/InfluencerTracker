@@ -130,11 +130,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           publication: "Публикация"
         };
         
+        const oldStageName = stageNames[project.workflowStage as keyof typeof stageNames] || "Создание";
+        const newStageName = stageNames[req.body.workflowStage as keyof typeof stageNames];
+        
         await storage.createActivity({
           projectId: id,
           userId,
           activityType: "workflow_update",
-          description: `Проект перешел на этап: ${stageNames[req.body.workflowStage as keyof typeof stageNames]}`
+          description: `Статус проекта изменен: ${oldStageName} → ${newStageName}`
         });
       }
       
@@ -169,11 +172,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         publication: "Публикация"
       };
       
+      const oldStageName = stageNames[project.workflowStage as keyof typeof stageNames] || "Создание";
+      const newStageName = stageNames[stage as keyof typeof stageNames];
+      
       await storage.createActivity({
         projectId: id,
         userId,
         activityType: "workflow_update",
-        description: `Проект перешел на этап: ${stageNames[stage as keyof typeof stageNames]}`
+        description: `Статус проекта изменен: ${oldStageName} → ${newStageName}`
       });
       
       res.json(updatedProject);
@@ -199,6 +205,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       res.json(influencers.filter(Boolean));
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка сервера", error });
+    }
+  });
+
+  app.post("/api/projects/:id/influencers", isAuthenticated, async (req, res) => {
+    try {
+      // Make sure id is not 'new' for POST requests
+      if (req.params.id === 'new') {
+        return res.status(400).json({ message: "Недопустимый ID проекта" });
+      }
+      
+      const projectId = Number(req.params.id);
+      const { influencerId } = req.body;
+      
+      if (!influencerId) {
+        return res.status(400).json({ message: "Требуется ID инфлюенсера" });
+      }
+      
+      // Check if project exists
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Проект не найден" });
+      }
+      
+      // Check if influencer exists
+      const influencer = await storage.getInfluencer(Number(influencerId));
+      if (!influencer) {
+        return res.status(404).json({ message: "Инфлюенсер не найден" });
+      }
+      
+      // Check if relationship already exists
+      const existingRelation = await storage.getProjectInfluencer(projectId, Number(influencerId));
+      if (existingRelation) {
+        return res.status(400).json({ message: "Инфлюенсер уже добавлен к проекту" });
+      }
+      
+      // Create the relationship
+      await storage.createProjectInfluencer({
+        projectId,
+        influencerId: Number(influencerId),
+        scenarioStatus: "pending",
+        materialStatus: "pending",
+        publicationStatus: "pending"
+      });
+      
+      // Create activity log
+      const userId = (req.user as any).id;
+      const influencerName = influencer.nickname || influencer.id.toString();
+      
+      await storage.createActivity({
+        projectId,
+        userId,
+        activityType: "influencer_added",
+        description: `Инфлюенсер ${influencerName} добавлен к проекту`
+      });
+      
+      res.status(200).json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Ошибка сервера", error });
     }
