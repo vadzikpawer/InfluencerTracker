@@ -9,7 +9,8 @@ import {
   insertProjectSchema, 
   insertCommentSchema, 
   insertActivitySchema,
-  insertScenarioSchema 
+  insertScenarioSchema,
+  Scenario
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -701,10 +702,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Process any deadline updates
-      const updateData = {
-        status: "approved",
+      const updateData: Partial<Scenario> = {
+        status: "approved" as const,
         approvedAt: new Date(),
-        deadline: req.body.deadline ? new Date(req.body.deadline) : undefined
+        deadline: req.body.deadline ? new Date(req.body.deadline) : null
       };
       
       // Update the scenario
