@@ -127,10 +127,20 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
   });
 
   function onSubmit(data: FormValues) {
+    // Create a new data object with properly formatted dates
+    const formattedData = {
+      ...data,
+      // Convert date strings to Date objects if they exist
+      deadline: data.deadline ? new Date(data.deadline) : null,
+      scenarioDeadline: data.scenarioDeadline ? new Date(data.scenarioDeadline) : null,
+      materialDeadline: data.materialDeadline ? new Date(data.materialDeadline) : null,
+      publicationDeadline: data.publicationDeadline ? new Date(data.publicationDeadline) : null,
+    };
+
     if (isNew) {
-      createProjectMutation.mutate(data);
+      createProjectMutation.mutate(formattedData);
     } else {
-      updateProjectMutation.mutate(data);
+      updateProjectMutation.mutate(formattedData);
     }
   }
 
