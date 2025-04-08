@@ -10,8 +10,8 @@ import { Timeline } from "@/components/ui/timeline";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Comments } from "@/components/ui/comments-section";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus, ChevronRight } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus, ChevronRight, Trash2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AddInfluencerForm } from "@/components/forms/add-influencer-form";
 import { CreateScenarioForm } from "@/components/forms/create-scenario-form";
@@ -33,6 +33,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   const [_, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"scenario" | "material" | "publication">("scenario");
   const [addInfluencerDialogOpen, setAddInfluencerDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   const { data: project = {} as Project, isLoading: isLoadingProject } = useQuery<Project>({
     queryKey: [`/api/projects/${id}`],
@@ -116,6 +117,32 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+  
+  const deleteProjectMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", `/api/projects/${id}`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Ошибка при удалении проекта");
+      }
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: t("project_deleted"),
+        description: t("project_delete_success"),
+      });
+      navigate("/projects");
+    },
+    onError: (error) => {
+      toast({
+        title: t("error"),
+        description: error.message,
+        variant: "destructive",
+      });
+      setDeleteDialogOpen(false);
     },
   });
 
@@ -227,6 +254,40 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
 
   return (
     <PageContainer>
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{t("delete_project_confirmation")}</DialogTitle>
+            <DialogDescription>
+              {t("delete_project_warning")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm font-medium mb-2">
+              {t("project_to_delete")}: <span className="font-bold">{project.title}</span>
+            </p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              {t("delete_project_permanent")}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              {t("cancel")}
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => deleteProjectMutation.mutate()}
+              disabled={deleteProjectMutation.isPending}
+            >
+              {deleteProjectMutation.isPending ? t("deleting...") : t("delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center">
@@ -237,11 +298,21 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
             </Button>
             <h1 className="text-2xl font-bold font-sf-pro">{project.title}</h1>
           </div>
-          <Button variant="outline" className="text-primary" asChild>
-            <Link href={`/projects/${id}/edit`}>
-              {t("edit_project")}
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="text-primary" asChild>
+              <Link href={`/projects/${id}/edit`}>
+                {t("edit_project")}
+              </Link>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="text-destructive border-destructive hover:bg-destructive/10"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {t("delete_project")}
+            </Button>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <StatusBadge status={project.status as any} />

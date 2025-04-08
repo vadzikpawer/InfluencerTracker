@@ -147,6 +147,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.delete("/api/projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      
+      // Verify the project exists
+      const project = await storage.getProject(id);
+      if (!project) {
+        return res.status(404).json({ message: "Проект не найден" });
+      }
+      
+      // Check if the user is authorized (only manager of the project or admin can delete)
+      const userId = (req.user as any).id;
+      if (project.managerId !== userId) {
+        return res.status(403).json({ message: "Нет прав для удаления проекта" });
+      }
+      
+      // Delete the project and all related data
+      const success = await storage.deleteProject(id);
+      
+      if (success) {
+        res.status(200).json({ message: "Проект успешно удален" });
+      } else {
+        res.status(500).json({ message: "Не удалось удалить проект" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка сервера", error });
+    }
+  });
+  
   // Endpoint to update project workflow stage
   app.post("/api/projects/:id/workflow-stage", isAuthenticated, async (req, res) => {
     try {
@@ -587,7 +616,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the scenario status
       const updatedScenario = await storage.updateScenario(scenarioId, {
         status: "approved",
-        approvedAt: new Date().toISOString(),
+        approvedAt: new Date()
       });
       
       // Log the activity
@@ -603,9 +632,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (projectInfluencer) {
         await storage.updateProjectInfluencer(projectInfluencer.id, {
           scenarioStatus: "approved",
-          scenarioCompletedAt: new Date().toISOString(),
+          scenarioCompletedAt: new Date(),
         });
       }
+      
+      // Update project workflow stage to 'material' when scenario is approved
+      await storage.updateProject(projectId, {
+        workflowStage: "material"
+      });
+      
+      // Log the activity for workflow stage change
+      await storage.createActivity({
+        projectId,
+        userId,
+        activityType: "workflow_update",
+        description: "Статус проекта изменен: Сценарий → Материалы"
+      });
       
       res.json(updatedScenario);
     } catch (error) {

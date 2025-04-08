@@ -28,6 +28,7 @@ export interface IStorage {
   getProjects(): Promise<Project[]>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, project: Partial<Project>): Promise<Project | undefined>;
+  deleteProject(id: number): Promise<boolean>;
   getProjectsByManagerId(managerId: number): Promise<Project[]>;
   
   // Project-Influencer operations
@@ -347,6 +348,20 @@ export class MemStorage implements IStorage {
       (project) => project.managerId === managerId,
     );
   }
+  
+  async deleteProject(id: number): Promise<boolean> {
+    // Delete all related items
+    this.comments = new Map([...this.comments].filter(([_, comment]) => comment.projectId !== id));
+    this.activities = new Map([...this.activities].filter(([_, activity]) => activity.projectId !== id));
+    this.scenarios = new Map([...this.scenarios].filter(([_, scenario]) => scenario.projectId !== id));
+    this.materials = new Map([...this.materials].filter(([_, material]) => material.projectId !== id));
+    this.publications = new Map([...this.publications].filter(([_, publication]) => publication.projectId !== id));
+    this.projectInfluencers = new Map([...this.projectInfluencers].filter(([_, pi]) => pi.projectId !== id));
+    
+    // Delete the project itself
+    const result = this.projects.delete(id);
+    return result;
+  }
 
   // Project-Influencer operations
   async getProjectInfluencer(projectId: number, influencerId: number): Promise<ProjectInfluencer | undefined> {
@@ -620,6 +635,48 @@ export class DatabaseStorage implements IStorage {
 
   async getProjectsByManagerId(managerId: number): Promise<Project[]> {
     return await db.select().from(projects).where(eq(projects.managerId, managerId));
+  }
+  
+  async deleteProject(id: number): Promise<boolean> {
+    // Using a transaction to ensure all related deletions succeed or fail together
+    await db.transaction(async (tx) => {
+      // Delete project comments
+      await tx
+        .delete(comments)
+        .where(eq(comments.projectId, id));
+        
+      // Delete project activities
+      await tx
+        .delete(activities)
+        .where(eq(activities.projectId, id));
+        
+      // Delete project scenarios
+      await tx
+        .delete(scenarios)
+        .where(eq(scenarios.projectId, id));
+        
+      // Delete project materials
+      await tx
+        .delete(materials)
+        .where(eq(materials.projectId, id));
+        
+      // Delete project publications
+      await tx
+        .delete(publications)
+        .where(eq(publications.projectId, id));
+        
+      // Delete project-influencer relationships
+      await tx
+        .delete(projectInfluencers)
+        .where(eq(projectInfluencers.projectId, id));
+        
+      // Finally delete the project itself
+      await tx
+        .delete(projects)
+        .where(eq(projects.id, id));
+    });
+    
+    return true;
   }
 
   // Project-Influencer operations
