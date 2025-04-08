@@ -183,6 +183,9 @@ const resources = {
       "scenario_approval_success": "Сценарий успешно утвержден",
       "scenario_rejected": "Сценарий отклонен",
       "scenario_updated": "Сценарий обновлен",
+      "scenario_create": "Создан новый сценарий",
+      "scenario_deleted": "Сценарий удален",
+      "scenario_to_material": "Сценарий утвержден, переход к материалам",
       "material_submitted": "Материал отправлен",
       "material_approved": "Материал утвержден",
       "material_rejected": "Материал отклонен",
@@ -191,6 +194,10 @@ const resources = {
       "project_created": "Проект создан",
       "project_updated": "Проект обновлен",
       "project_completed": "Проект завершен",
+      "workflow_to_scenario": "Переход на этап сценариев",
+      "workflow_to_material": "Переход на этап материалов",
+      "workflow_to_publication": "Переход на этап публикаций",
+      "workflow_stage_changed": "Изменен этап проекта",
       
       // Errors
       "error": "Ошибка",

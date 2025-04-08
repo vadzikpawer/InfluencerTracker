@@ -130,6 +130,11 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       return await res.json();
     },
     onSuccess: () => {
+      // Invalidate the projects query cache so the list gets refreshed
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stats/manager'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/activities/recent'] });
+      
       toast({
         title: t("project_deleted"),
         description: t("project_delete_success"),

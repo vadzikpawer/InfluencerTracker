@@ -44,6 +44,7 @@ export interface IStorage {
   getScenariosByInfluencer(influencerId: number): Promise<Scenario[]>;
   createScenario(scenario: InsertScenario): Promise<Scenario>;
   updateScenario(id: number, scenario: Partial<Scenario>): Promise<Scenario | undefined>;
+  deleteScenario(id: number): Promise<boolean>;
   
   // Material operations
   getMaterial(id: number): Promise<Material | undefined>;
@@ -439,6 +440,10 @@ export class MemStorage implements IStorage {
     this.scenarios.set(id, updated);
     return updated;
   }
+  
+  async deleteScenario(id: number): Promise<boolean> {
+    return this.scenarios.delete(id);
+  }
 
   // Material operations
   async getMaterial(id: number): Promise<Material | undefined> {
@@ -779,6 +784,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(scenarios.id, id))
       .returning();
     return updatedScenario || undefined;
+  }
+  
+  async deleteScenario(id: number): Promise<boolean> {
+    const result = await db
+      .delete(scenarios)
+      .where(eq(scenarios.id, id));
+    return result.rowCount > 0;
   }
 
   // Material operations

@@ -133,11 +133,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const oldStageName = stageNames[project.workflowStage as keyof typeof stageNames] || "Создание";
         const newStageName = stageNames[req.body.workflowStage as keyof typeof stageNames];
         
+        // Generate a specific activity type based on workflow stage change
+        let activityType = "workflow_stage_changed";
+        if (req.body.workflowStage === "scenario") {
+          activityType = "workflow_to_scenario";
+        } else if (req.body.workflowStage === "material") {
+          activityType = "workflow_to_material";
+        } else if (req.body.workflowStage === "publication") {
+          activityType = "workflow_to_publication";
+        }
+        
         await storage.createActivity({
           projectId: id,
           userId,
-          activityType: "workflow_update",
-          description: `Статус проекта изменен: ${oldStageName} → ${newStageName}`
+          activityType,
+          description: `Проект перешел на этап: ${newStageName}`
         });
       }
       
@@ -204,11 +214,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const oldStageName = stageNames[project.workflowStage as keyof typeof stageNames] || "Создание";
       const newStageName = stageNames[stage as keyof typeof stageNames];
       
+      // Generate a specific activity type based on workflow stage change
+      let activityType = "workflow_stage_changed";
+      if (stage === "scenario") {
+        activityType = "workflow_to_scenario";
+      } else if (stage === "material") {
+        activityType = "workflow_to_material";
+      } else if (stage === "publication") {
+        activityType = "workflow_to_publication";
+      }
+      
       await storage.createActivity({
         projectId: id,
         userId,
-        activityType: "workflow_update",
-        description: `Статус проекта изменен: ${oldStageName} → ${newStageName}`
+        activityType,
+        description: `Проект перешел на этап: ${newStageName}`
       });
       
       res.json(updatedProject);
@@ -589,6 +609,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete a scenario
+  app.delete("/api/projects/:projectId/scenarios/:scenarioId", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = Number(req.params.projectId);
+      const scenarioId = Number(req.params.scenarioId);
+      const userId = req.user?.id as number;
+      
+      // Verify the project exists
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Проект не найден" });
+      }
+      
+      // Verify the scenario exists
+      const scenario = await storage.getScenario(scenarioId);
+      if (!scenario) {
+        return res.status(404).json({ message: "Сценарий не найден" });
+      }
+      
+      // Verify the scenario belongs to the project
+      if (scenario.projectId !== projectId) {
+        return res.status(400).json({ message: "Сценарий не принадлежит указанному проекту" });
+      }
+      
+      // Delete the scenario
+      const result = await storage.deleteScenario(scenarioId);
+      if (!result) {
+        return res.status(500).json({ message: "Ошибка при удалении сценария" });
+      }
+      
+      // Log the activity
+      await storage.createActivity({
+        projectId,
+        userId,
+        activityType: "scenario_deleted",
+        description: "Сценарий удален"
+      });
+      
+      res.json({ message: "Сценарий успешно удален" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Ошибка сервера", error });
+    }
+  });
+  
   // Approve a scenario
   app.patch("/api/projects/:projectId/scenarios/:scenarioId", isAuthenticated, async (req, res) => {
     try {
@@ -645,8 +710,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createActivity({
         projectId,
         userId,
-        activityType: "workflow_update",
-        description: "Статус проекта изменен: Сценарий → Материалы"
+        activityType: "scenario_to_material",
+        description: "Проект перешел на этап материалов. Сценарий утвержден."
       });
       
       res.json(updatedScenario);

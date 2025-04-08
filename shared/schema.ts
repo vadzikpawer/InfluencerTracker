@@ -89,6 +89,7 @@ export const scenarios = pgTable("scenarios", {
   status: text("status", { enum: ["added", "under_approval", "approved", "rejected"] }).default("added").notNull(),
   submittedAt: timestamp("submitted_at"),
   approvedAt: timestamp("approved_at"),
+  deadline: timestamp("deadline"),
   version: integer("version").default(1).notNull(),
 });
 
@@ -102,10 +103,12 @@ export const materials = pgTable("materials", {
   projectId: integer("project_id").references(() => projects.id).notNull(),
   influencerId: integer("influencer_id").references(() => influencers.id).notNull(),
   materialUrl: text("material_url").notNull(),
+  googleDriveUrl: text("google_drive_url"),
   description: text("description"),
   status: text("status", { enum: ["draft", "submitted", "approved", "rejected"] }).default("draft").notNull(),
   submittedAt: timestamp("submitted_at"),
   approvedAt: timestamp("approved_at"),
+  deadline: timestamp("deadline"),
 });
 
 export const insertMaterialSchema = createInsertSchema(materials).omit({ id: true });

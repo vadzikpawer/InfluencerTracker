@@ -46,18 +46,25 @@ export function ActivityCard({ activity, className }: ActivityCardProps) {
     switch (type) {
       case "scenario_approved":
       case "scenario_updated":
+      case "scenario_create":
+      case "scenario_to_material":
+      case "workflow_to_scenario":
         return <FileText className="h-4 w-4" />;
       case "scenario_rejected":
+      case "scenario_deleted":
         return <AlertCircle className="h-4 w-4" />;
       case "material_submitted":
       case "material_approved":
+      case "workflow_to_material":
         return <Image className="h-4 w-4" />;
       case "material_rejected":
         return <AlertCircle className="h-4 w-4" />;
       case "publication_published":
       case "publication_verified":
+      case "workflow_to_publication":
         return <Share2 className="h-4 w-4" />;
       case "project_created":
+      case "workflow_stage_changed":
         return <Plus className="h-4 w-4" />;
       case "project_completed":
         return <CheckCircle className="h-4 w-4" />;
@@ -67,13 +74,14 @@ export function ActivityCard({ activity, className }: ActivityCardProps) {
   };
   
   const getActivityColor = (type: string) => {
-    if (type.includes("approved") || type.includes("completed") || type.includes("verified")) {
+    if (type.includes("approved") || type.includes("completed") || type.includes("verified") || type === "scenario_to_material") {
       return "bg-secondary/10 text-secondary";
     }
-    if (type.includes("rejected")) {
+    if (type.includes("rejected") || type.includes("deleted")) {
       return "bg-warning/10 text-warning";
     }
-    if (type.includes("created") || type.includes("updated") || type.includes("published")) {
+    if (type.includes("created") || type.includes("updated") || type.includes("published") || 
+        type.includes("workflow_to_") || type === "workflow_stage_changed") {
       return "bg-primary/10 text-primary";
     }
     return "bg-neutral-200/50 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300";
