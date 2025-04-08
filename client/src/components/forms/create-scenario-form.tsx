@@ -6,6 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
+import { Calendar as CalendarIcon } from "lucide-react";
 
 import {
   Form,
@@ -19,11 +22,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   content: z.string().min(10, { message: "Содержание должно содержать не менее 10 символов" }),
   googleDocUrl: z.string().url({ message: "Необходимо ввести корректный URL" }).optional().or(z.literal("")),
+  deadline: z.date().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -43,6 +54,7 @@ export function CreateScenarioForm({ projectId, onSuccess }: CreateScenarioFormP
     defaultValues: {
       content: "",
       googleDocUrl: "",
+      deadline: null,
     },
   });
 
@@ -132,6 +144,52 @@ export function CreateScenarioForm({ projectId, onSuccess }: CreateScenarioFormP
                   </FormControl>
                   <FormDescription>
                     {t('scenario_content_description')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="deadline"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>{t('deadline') || 'Крайний срок'}</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP", { locale: ru })
+                          ) : (
+                            <span>{t('select_date') || 'Выберите дату'}</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value || undefined}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                          date < new Date(new Date().setHours(0, 0, 0, 0))
+                        }
+                        initialFocus
+                        locale={ru}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    {t('deadline_description') || 'Укажите крайний срок для подготовки сценария'}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

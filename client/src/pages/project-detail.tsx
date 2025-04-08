@@ -120,6 +120,32 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     },
   });
   
+  const deleteScenarioMutation = useMutation({
+    mutationFn: async (scenarioId: number) => {
+      const res = await apiRequest("DELETE", `/api/projects/${id}/scenarios/${scenarioId}`);
+      if (!res.ok) {
+        throw new Error(t("delete_scenario_error"));
+      }
+      return scenarioId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/scenarios`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/activities`] });
+      
+      toast({
+        title: t("scenario_deleted"),
+        description: t("scenario_deleted_success"),
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: t("error"),
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
   const deleteProjectMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("DELETE", `/api/projects/${id}`);
@@ -461,7 +487,17 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                               </a>
                             </div>
                           )}
-                          <div className="flex justify-end">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              variant="outline"
+                              className="text-destructive border-destructive hover:bg-destructive/10 text-sm"
+                              onClick={() => deleteScenarioMutation.mutate(scenario.id)}
+                              disabled={deleteScenarioMutation.isPending}
+                            >
+                              {deleteScenarioMutation.isPending 
+                                ? t('deleting...') 
+                                : t('delete')}
+                            </Button>
                             <Button 
                               className="bg-primary text-white text-sm"
                               onClick={() => approveScenarioMutation.mutate(scenario.id)}
