@@ -560,6 +560,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Approve a scenario
+  app.patch("/api/projects/:projectId/scenarios/:scenarioId", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = Number(req.params.projectId);
+      const scenarioId = Number(req.params.scenarioId);
+      const userId = req.user?.id as number;
+      
+      // Verify the project exists
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Проект не найден" });
+      }
+      
+      // Verify the scenario exists
+      const scenario = await storage.getScenario(scenarioId);
+      if (!scenario) {
+        return res.status(404).json({ message: "Сценарий не найден" });
+      }
+      
+      // Verify the scenario belongs to the project
+      if (scenario.projectId !== projectId) {
+        return res.status(400).json({ message: "Сценарий не принадлежит указанному проекту" });
+      }
+      
+      // Update the scenario status
+      const updatedScenario = await storage.updateScenario(scenarioId, {
+        status: "approved",
+        approvedAt: new Date().toISOString(),
+      });
+      
+      // Log the activity
+      await storage.createActivity({
+        projectId,
+        userId,
+        activityType: "scenario_approved",
+        description: "Сценарий утвержден"
+      });
+      
+      // Also update the project-influencer mapping status
+      const projectInfluencer = await storage.getProjectInfluencer(projectId, scenario.influencerId);
+      if (projectInfluencer) {
+        await storage.updateProjectInfluencer(projectInfluencer.id, {
+          scenarioStatus: "approved",
+          scenarioCompletedAt: new Date().toISOString(),
+        });
+      }
+      
+      res.json(updatedScenario);
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка сервера", error });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

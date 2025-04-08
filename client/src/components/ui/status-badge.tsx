@@ -15,7 +15,9 @@ type StatusType =
   | "rejected"
   | "published"
   | "verified"
-  | "warning";
+  | "warning"
+  | "added"
+  | "under_approval";
 
 interface StatusBadgeProps {
   status: StatusType;
@@ -40,6 +42,8 @@ export function StatusBadge({ status, label, className }: StatusBadgeProps) {
     published: "bg-primary/10 text-primary",
     verified: "bg-secondary/10 text-secondary",
     warning: "bg-warning/10 text-warning",
+    added: "bg-muted text-muted-foreground",
+    under_approval: "bg-warning/10 text-warning",
   };
 
   const displayText = label || t(status);

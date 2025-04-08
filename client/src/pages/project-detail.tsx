@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AddInfluencerForm } from "@/components/forms/add-influencer-form";
+import { CreateScenarioForm } from "@/components/forms/create-scenario-form";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -49,6 +50,22 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     queryKey: [`/api/projects/${id}/activities`],
   });
   
+  interface Scenario {
+    id: number;
+    projectId: number;
+    influencerId: number;
+    content: string;
+    googleDocUrl?: string;
+    status: string;
+    submittedAt?: string;
+    approvedAt?: string;
+    version: number;
+  }
+  
+  const { data: scenarios = [] as Scenario[], isLoading: isLoadingScenarios } = useQuery<Scenario[]>({
+    queryKey: [`/api/projects/${id}/scenarios`],
+  });
+  
   const updateWorkflowStageMutation = useMutation({
     mutationFn: async (stage: string) => {
       const res = await apiRequest("POST", `/api/projects/${id}/workflow-stage`, { stage });
@@ -61,6 +78,37 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
         title: t("workflow_updated"),
         description: t("project_stage_changed"),
       });
+    },
+    onError: (error) => {
+      toast({
+        title: t("error"),
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const approveScenarioMutation = useMutation({
+    mutationFn: async (scenarioId: number) => {
+      const res = await apiRequest("PATCH", `/api/projects/${id}/scenarios/${scenarioId}`, { 
+        status: "approved",
+        approvedAt: new Date().toISOString()
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/scenarios`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/activities`] });
+      
+      toast({
+        title: t("scenario_approved"),
+        description: t("scenario_approval_success"),
+      });
+      
+      // Update project workflow stage to material if we're still in scenario stage
+      if (project.workflowStage === 'scenario') {
+        updateWorkflowStageMutation.mutate('material');
+      }
     },
     onError: (error) => {
       toast({
@@ -298,41 +346,86 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                     <StatusBadge status={project.workflowStage === 'scenario' ? 'pending' : 'completed'} />
                   </div>
                   
-                  <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <FileText className="h-12 w-12 text-neutral-400 mb-4" />
-                    <h4 className="text-base font-medium mb-2">{t('create_scenario')}</h4>
-                    <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4 max-w-md">
-                      {t('scenario_description')}
-                    </p>
-                    <Button 
-                      className="bg-primary text-white"
-                      onClick={() => {
-                        const createScenarioEndpoint = `/api/projects/${id}/scenarios`;
-                        apiRequest("POST", createScenarioEndpoint, {
-                          projectId: Number(id),
-                          content: t('new_scenario_content'),
-                          status: "draft"
-                        })
-                        .then(res => res.json())
-                        .then(data => {
+{isLoadingScenarios ? (
+                    <div className="py-6">
+                      <div className="flex items-center">
+                        <Skeleton className="h-10 w-10 mr-3" />
+                        <div className="flex-1">
+                          <Skeleton className="h-5 w-40 mb-2" />
+                          <Skeleton className="h-4 w-28" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-32 w-full mt-4" />
+                      <div className="flex justify-end mt-3">
+                        <Skeleton className="h-7 w-20" />
+                      </div>
+                    </div>
+                  ) : scenarios.length > 0 ? (
+                    <div className="py-4">
+                      {scenarios.map((scenario, index) => (
+                        <div key={scenario.id} className={`py-3 ${index > 0 ? 'border-t border-neutral-200/50 dark:border-neutral-800/50' : ''}`}>
+                          <div className="flex justify-between mb-2">
+                            <div className="font-medium">
+                              {t('scenario')} {scenario.version > 1 ? `v${scenario.version}` : ''}
+                            </div>
+                            <StatusBadge status={scenario.status as any} />
+                          </div>
+                          <div className="text-sm text-neutral-800/80 dark:text-neutral-200/80 mb-4 whitespace-pre-line">
+                            {scenario.content}
+                          </div>
+                          {scenario.googleDocUrl && (
+                            <div className="mt-2 mb-4">
+                              <a
+                                href={scenario.googleDocUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary flex items-center text-sm"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" /> {t('google_doc')}
+                              </a>
+                            </div>
+                          )}
+                          <div className="flex justify-end">
+                            <Button 
+                              className="bg-primary text-white text-sm"
+                              onClick={() => approveScenarioMutation.mutate(scenario.id)}
+                              disabled={scenario.status === 'approved' || approveScenarioMutation.isPending}
+                            >
+                              {approveScenarioMutation.isPending 
+                                ? t('approving...') 
+                                : scenario.status === 'approved' 
+                                  ? t('approved') 
+                                  : t('approve_scenario')}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="mt-4 flex justify-end">
+                        <CreateScenarioForm 
+                          projectId={Number(id)} 
+                          onSuccess={() => {
+                            // Refresh the scenarios after creating a new one
+                            queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/scenarios`] });
+                          }} 
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <FileText className="h-12 w-12 text-neutral-400 mb-4" />
+                      <h4 className="text-base font-medium mb-2">{t('create_scenario')}</h4>
+                      <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4 max-w-md">
+                        {t('scenario_description')}
+                      </p>
+                      <CreateScenarioForm 
+                        projectId={Number(id)} 
+                        onSuccess={() => {
+                          // Refresh the scenarios after creating a new one
                           queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/scenarios`] });
-                          toast({
-                            title: t('scenario_created'),
-                            description: t('scenario_created_success'),
-                          });
-                        })
-                        .catch(error => {
-                          toast({
-                            title: t('error'),
-                            description: error.message,
-                            variant: "destructive"
-                          });
-                        });
-                      }}
-                    >
-                      {t('create_scenario')}
-                    </Button>
-                  </div>
+                        }} 
+                      />
+                    </div>
+                  )}
                   
                   <div className="flex items-center justify-end text-sm mt-4">
                     <Button 

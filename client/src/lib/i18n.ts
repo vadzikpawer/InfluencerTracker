@@ -74,6 +74,22 @@ const resources = {
       "material_needs_review": "Материал требует проверки",
       "check_scenario_feedback": "Проверить отзыв о сценарии",
       "upload_material": "Загрузить материал",
+      "create_scenario": "Создать сценарий",
+      "creating": "Создание...",
+      "create": "Создать",
+      "scenario_created": "Сценарий создан",
+      "scenario_created_success": "Сценарий успешно создан",
+      "scenario_description": "Добавьте сценарий для этого проекта, чтобы установить задачи и ожидания для инфлюенсеров.",
+      "scenario_content": "Содержание сценария",
+      "scenario_content_placeholder": "Опишите подробно сценарий для инфлюенсера...",
+      "scenario_content_description": "Подробное описание сценария для инфлюенсера",
+      "google_doc_url": "Ссылка на Google Doc",
+      "google_doc_url_description": "Ссылка на детальный сценарий в Google Docs (опционально)",
+      "google_doc": "Открыть в Google Docs",
+      "approve_scenario": "Утвердить сценарий",
+      "approving...": "Утверждение...",
+      "new_scenario_content": "Новый сценарий для проекта",
+      "view_materials": "Перейти к материалам",
       
       // Project statuses
       "draft": "Черновик",
@@ -85,6 +101,8 @@ const resources = {
       "rejected": "Отклонено",
       "published": "Опубликовано",
       "verified": "Проверено",
+      "added": "Добавлен",
+      "under_approval": "На утверждении",
       
       // Dashboard
       "overview": "Обзор текущих кампаний и статистика",
@@ -162,6 +180,7 @@ const resources = {
       
       // Activities
       "scenario_approved": "Сценарий утвержден",
+      "scenario_approval_success": "Сценарий успешно утвержден",
       "scenario_rejected": "Сценарий отклонен",
       "scenario_updated": "Сценарий обновлен",
       "material_submitted": "Материал отправлен",
