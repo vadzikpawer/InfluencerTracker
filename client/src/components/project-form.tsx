@@ -43,9 +43,9 @@ interface ProjectFormProps {
 
 const platformOptions = [
   { id: "instagram", label: "Instagram" },
-  { id: "vk_clips", label: "VK Clips" },
+  { id: "vk", label: "VK" },
   { id: "tiktok", label: "TikTok" },
-  { id: "youtube_shorts", label: "YouTube Shorts" },
+  { id: "youtube", label: "YouTube" },
   { id: "telegram", label: "Telegram" },
 ];
 
@@ -65,7 +65,6 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
     keyRequirements: project?.keyRequirements || [],
     platforms: project?.platforms || [],
     budget: project?.budget || undefined,
-    erid: project?.erid || "",
     managerId: user?.role === "manager" ? user?.id : project?.managerId || null,
     technicalLinks: project?.technicalLinks || [],
     deadline: project?.deadline || null,
@@ -239,7 +238,7 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{t("description")}</FormLabel>
+                <FormLabel>{t("project_description")}</FormLabel>
                 <FormControl>
                   <Textarea 
                     {...field} 
@@ -304,20 +303,6 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
                       value={field.value || ""}
                       onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="erid"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ERID</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder={t("enter_erid")} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -10,6 +10,7 @@ import ProjectFormPage from "@/pages/project-form-page";
 import InfluencerDashboard from "@/pages/influencer-dashboard";
 import Influencers from "@/pages/influencers";
 import Login from "@/pages/login";
+import Register from "@/pages/register";
 import { AuthProvider } from "@/contexts/auth-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
@@ -35,6 +36,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
       
       <Route path="/">
         {user?.role === "manager" ? 

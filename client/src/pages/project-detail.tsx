@@ -11,7 +11,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Comments } from "@/components/ui/comments-section";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus, ChevronRight, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus, ChevronRight, Trash2, Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AddInfluencerForm } from "@/components/forms/add-influencer-form";
 import { CreateScenarioForm } from "@/components/forms/create-scenario-form";
@@ -22,6 +22,8 @@ import { ru } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Project, Activity, Comment, Influencer } from "@shared/schema";
+import { useAuth } from "@/contexts/AuthContext";
+import axios from "axios";
 
 interface ProjectDetailProps {
   id: string;
@@ -30,10 +32,12 @@ interface ProjectDetailProps {
 export default function ProjectDetail({ id }: ProjectDetailProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [_, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"scenario" | "material" | "publication">("scenario");
   const [addInfluencerDialogOpen, setAddInfluencerDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [publicationUrls, setPublicationUrls] = useState<Record<string, string>>({});
   
   const { data: project = {} as Project, isLoading: isLoadingProject } = useQuery<Project>({
     queryKey: [`/api/projects/${id}`],
@@ -176,6 +180,62 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       setDeleteDialogOpen(false);
     },
   });
+
+  const submitPublicationsMutation = useMutation({
+    mutationFn: async (publications: { platform: string; publicationUrl: string }[]) => {
+      const response = await axios.post(`/api/projects/${id}/publications`, { publications });
+      return response.data;
+    },
+    onSuccess: () => {
+      toast({
+        title: t("publication_submitted"),
+        description: t("publication_submitted_success"),
+      });
+      // Reset form
+      setPublicationUrls({});
+    },
+    onError: (error) => {
+      toast({
+        title: t("error"),
+        description: t("publication_submit_error"),
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handlePublicationSubmit = () => {
+    const publications = Object.entries(publicationUrls)
+      .filter(([_, url]) => url.trim())
+      .map(([platform, url]) => {
+        // Normalize platform values to match schema
+        const normalizedPlatform = platform === 'vk_clips' ? 'vk' : 
+                                 platform === 'youtube_shorts' ? 'youtube' : 
+                                 platform;
+        
+        return {
+          platform: normalizedPlatform,
+          publicationUrl: url
+        };
+      });
+
+    if (publications.length === 0) {
+      toast({
+        title: t("error"),
+        description: t("no_publications_to_submit"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    submitPublicationsMutation.mutate(publications);
+  };
+
+  const handleUrlChange = (platform: string, url: string) => {
+    setPublicationUrls(prev => ({
+      ...prev,
+      [platform]: url
+    }));
+  };
 
   if (isLoadingProject) {
     return (
@@ -361,7 +421,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           )}
           
           <div className="ml-auto flex items-center">
-            <span className="text-sm mr-2">{t('stage')}:</span>
+            <span className="text-sm mr-2">{t('project_stage')}:</span>
             <Select 
               value={project.workflowStage} 
               onValueChange={(value) => updateWorkflowStageMutation.mutate(value)}
@@ -856,13 +916,26 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                                   type="text"
                                   placeholder={`${t('enter_link')} ${platform}`}
                                   className="w-full rounded-md border border-neutral-200 dark:border-neutral-700 dark:bg-neutral-800/50 px-3 py-2 text-sm"
+                                  value={publicationUrls[platform] || ''}
+                                  onChange={(e) => handleUrlChange(platform, e.target.value)}
                                 />
                               </div>
                             </div>
                           ))}
                         </div>
-                        <Button className="bg-primary text-white">
-                          {t('submit_publications')}
+                        <Button 
+                          className="bg-primary text-white w-full"
+                          onClick={handlePublicationSubmit}
+                          disabled={submitPublicationsMutation.isPending}
+                        >
+                          {submitPublicationsMutation.isPending ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              {t('submitting')}
+                            </>
+                          ) : (
+                            t('submit_publications')
+                          )}
                         </Button>
                       </div>
                     ) : (

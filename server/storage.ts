@@ -54,11 +54,11 @@ export interface IStorage {
   updateMaterial(id: number, material: Partial<Material>): Promise<Material | undefined>;
   
   // Publication operations
-  getPublication(id: number): Promise<Publication | undefined>;
-  getPublicationsByProject(projectId: number): Promise<Publication[]>;
-  getPublicationsByInfluencer(influencerId: number): Promise<Publication[]>;
-  createPublication(publication: InsertPublication): Promise<Publication>;
-  updatePublication(id: number, publication: Partial<Publication>): Promise<Publication | undefined>;
+  getPublication(id: number): Promise<Publication | null>;
+  getPublications(projectId: number): Promise<Publication[]>;
+  createPublication(data: InsertPublication): Promise<Publication>;
+  createPublications(data: InsertPublication[]): Promise<Publication[]>;
+  updatePublication(id: number, data: Partial<InsertPublication>): Promise<Publication>;
   
   // Comment operations
   getComment(id: number): Promise<Comment | undefined>;
@@ -479,34 +479,39 @@ export class MemStorage implements IStorage {
   }
 
   // Publication operations
-  async getPublication(id: number): Promise<Publication | undefined> {
-    return this.publications.get(id);
+  async getPublication(id: number): Promise<Publication | null> {
+    return this.publications.get(id) || null;
   }
 
-  async getPublicationsByProject(projectId: number): Promise<Publication[]> {
+  async getPublications(projectId: number): Promise<Publication[]> {
     return Array.from(this.publications.values()).filter(
       (publication) => publication.projectId === projectId,
     );
   }
 
-  async getPublicationsByInfluencer(influencerId: number): Promise<Publication[]> {
-    return Array.from(this.publications.values()).filter(
-      (publication) => publication.influencerId === influencerId,
-    );
-  }
-
-  async createPublication(publication: InsertPublication): Promise<Publication> {
+  async createPublication(data: InsertPublication): Promise<Publication> {
     const id = this.publicationIdCounter++;
-    const newPublication: Publication = { ...publication, id };
+    const newPublication: Publication = { ...data, id };
     this.publications.set(id, newPublication);
     return newPublication;
   }
 
-  async updatePublication(id: number, publication: Partial<Publication>): Promise<Publication | undefined> {
+  async createPublications(data: InsertPublication[]): Promise<Publication[]> {
+    const result: Publication[] = [];
+    for (const publication of data) {
+      const id = this.publicationIdCounter++;
+      const newPublication: Publication = { ...publication, id };
+      this.publications.set(id, newPublication);
+      result.push(newPublication);
+    }
+    return result;
+  }
+
+  async updatePublication(id: number, data: Partial<InsertPublication>): Promise<Publication> {
     const existing = this.publications.get(id);
-    if (!existing) return undefined;
+    if (!existing) throw new Error("Publication not found");
     
-    const updated = { ...existing, ...publication };
+    const updated = { ...existing, ...data };
     this.publications.set(id, updated);
     return updated;
   }
@@ -840,47 +845,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Publication operations
-  async getPublication(id: number): Promise<Publication | undefined> {
-    const [publication] = await db.select().from(publications).where(eq(publications.id, id));
-    return publication || undefined;
+  async getPublication(id: number): Promise<Publication | null> {
+    const result = await db.select().from(publications).where(eq(publications.id, id));
+    return result[0] || null;
   }
 
-  async getPublicationsByProject(projectId: number): Promise<Publication[]> {
+  async getPublications(projectId: number): Promise<Publication[]> {
     return await db
       .select()
       .from(publications)
       .where(eq(publications.projectId, projectId));
   }
 
-  async getPublicationsByInfluencer(influencerId: number): Promise<Publication[]> {
-    return await db
-      .select()
-      .from(publications)
-      .where(eq(publications.influencerId, influencerId));
-  }
-
-  async createPublication(insertPublication: InsertPublication): Promise<Publication> {
-    // Ensure all required fields have proper values
-    const formattedData = {
-      ...insertPublication,
-      status: insertPublication.status || 'published',
-      verifiedAt: insertPublication.verifiedAt || null
-    };
-    
-    const [publication] = await db
+  async createPublication(data: InsertPublication): Promise<Publication> {
+    const result = await db
       .insert(publications)
-      .values(formattedData)
+      .values(data)
       .returning();
-    return publication;
+    return result[0];
   }
 
-  async updatePublication(id: number, update: Partial<Publication>): Promise<Publication | undefined> {
-    const [updatedPublication] = await db
+  async createPublications(data: InsertPublication[]): Promise<Publication[]> {
+    const result = await db
+      .insert(publications)
+      .values(data)
+      .returning();
+    return result;
+  }
+
+  async updatePublication(id: number, data: Partial<InsertPublication>): Promise<Publication> {
+    const result = await db
       .update(publications)
-      .set(update)
+      .set(data)
       .where(eq(publications.id, id))
       .returning();
-    return updatedPublication || undefined;
+    return result[0];
   }
 
   // Comment operations

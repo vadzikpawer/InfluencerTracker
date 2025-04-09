@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 
 type User = {
   id: number;
@@ -15,6 +16,7 @@ type AuthContextType = {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  register: (username: string, password: string, name: string, role: "manager" | "influencer") => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -22,6 +24,7 @@ export const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   login: async () => {},
   logout: async () => {},
+  register: async () => {},
 });
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -29,6 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -42,14 +46,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(data.user);
         }
       } catch (error) {
-        console.error("Failed to fetch current user:", error);
+        console.error(t("fetch_user_failed"), error);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchCurrentUser();
-  }, []);
+  }, [t]);
 
   const login = async (username: string, password: string) => {
     setIsLoading(true);
@@ -59,13 +63,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(data.user);
       setLocation("/");
       toast({
-        title: "Успешный вход",
-        description: `Добро пожаловать, ${data.user.name}!`,
+        title: t("login_success"),
+        description: `${t("welcome")}, ${data.user.name}!`,
       });
     } catch (error) {
       toast({
-        title: "Ошибка входа",
-        description: "Неверное имя пользователя или пароль",
+        title: t("login_failed"),
+        description: t("invalid_credentials"),
         variant: "destructive",
       });
       throw error;
@@ -81,13 +85,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setLocation("/login");
       toast({
-        title: "Выход выполнен",
-        description: "Вы успешно вышли из системы",
+        title: t("logout_success"),
+        description: t("logout_success_description"),
       });
     } catch (error) {
       toast({
-        title: "Ошибка выхода",
-        description: "Не удалось выполнить выход",
+        title: t("logout_failed"),
+        description: t("logout_failed_description"),
         variant: "destructive",
       });
     } finally {
@@ -95,8 +99,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const register = async (username: string, password: string, name: string, role: "manager" | "influencer") => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequest("POST", "/api/auth/register", { username, password, name, role });
+      const data = await response.json();
+      setUser(data.user);
+      setLocation("/");
+      toast({
+        title: t("registration_success"),
+        description: `${t("welcome")}, ${data.user.name}!`,
+      });
+    } catch (error: any) {
+      toast({
+        title: t("registration_failed"),
+        description: error.message === "User already exists" 
+          ? t("registration_failed_exists")
+          : t("error"),
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, register }}>
       {children}
     </AuthContext.Provider>
   );

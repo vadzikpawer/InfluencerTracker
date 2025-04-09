@@ -10,7 +10,8 @@ import {
   insertCommentSchema, 
   insertActivitySchema,
   insertScenarioSchema,
-  Scenario
+  Scenario,
+  insertPublicationSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -744,6 +745,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedScenario);
     } catch (error) {
       res.status(500).json({ message: "Ошибка сервера", error });
+    }
+  });
+
+  // Publication routes
+  app.get("/api/projects/:id/publications", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = Number(req.params.id);
+      const publications = await storage.getPublications(projectId);
+      res.json(publications);
+    } catch (error) {
+      res.status(500).json({ message: "Ошибка сервера", error });
+    }
+  });
+
+  app.post("/api/projects/:id/publications", isAuthenticated, async (req, res) => {
+    try {
+      const projectId = Number(req.params.id);
+      const userId = (req.user as any).id;
+      
+      // Get project to verify it exists and is in publication stage
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Проект не найден" });
+      }
+      
+      if (project.workflowStage !== "publication") {
+        return res.status(400).json({ message: "Проект не находится на этапе публикаций" });
+      }
+
+      // Process each publication
+      const publications = req.body.publications.map((pub: any) => ({
+        ...pub,
+        projectId,
+        influencerId: userId,
+        publishedAt: new Date(),
+        status: "published"
+      }));
+
+      // Validate and insert publications
+      const validatedPublications = publications.map((pub: any) => 
+        insertPublicationSchema.parse(pub)
+      );
+
+      const createdPublications = await storage.createPublications(validatedPublications);
+
+      // Create activity log
+      await storage.createActivity({
+        projectId,
+        userId,
+        activityType: "publication_submitted",
+        description: "Публикации отправлены на проверку"
+      });
+
+      res.status(201).json(createdPublications);
+    } catch (error) {
+      console.error("Publication creation error:", error);
+      res.status(400).json({ message: "Некорректные данные", error });
+    }
+  });
+
+  app.patch("/api/publications/:id/verify", isAuthenticated, async (req, res) => {
+    try {
+      const publicationId = Number(req.params.id);
+      const userId = (req.user as any).id;
+      
+      const publication = await storage.getPublication(publicationId);
+      if (!publication) {
+        return res.status(404).json({ message: "Публикация не найдена" });
+      }
+
+      const updatedPublication = await storage.updatePublication(publicationId, {
+        status: "verified",
+        verifiedAt: new Date()
+      });
+
+      // Create activity log
+      await storage.createActivity({
+        projectId: publication.projectId,
+        userId,
+        activityType: "publication_verified",
+        description: "Публикация проверена"
+      });
+
+      res.json(updatedPublication);
+    } catch (error) {
+      console.error("Publication verification error:", error);
+      res.status(400).json({ message: "Ошибка при проверке публикации", error });
     }
   });
 
