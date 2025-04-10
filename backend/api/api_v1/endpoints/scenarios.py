@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from db.session import get_db
-from models.models import Scenario, Project, Influencer
+from models.models import Scenario, Project, Influencer, User
 from schemas.schemas import ScenarioCreate, Scenario as ScenarioSchema
-from core.security import oauth2_scheme
+from core.security import get_current_user
 
 router = APIRouter()
 
@@ -12,7 +12,7 @@ router = APIRouter()
 def create_scenario(
     scenario: ScenarioCreate,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     # Check if project exists
     project = db.query(Project).filter(Project.id == scenario.project_id).first()
@@ -35,7 +35,7 @@ def read_scenarios(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     scenarios = db.query(Scenario).offset(skip).limit(limit).all()
     return scenarios
@@ -44,7 +44,7 @@ def read_scenarios(
 def read_scenario(
     scenario_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     scenario = db.query(Scenario).filter(Scenario.id == scenario_id).first()
     if scenario is None:
@@ -56,7 +56,7 @@ def update_scenario(
     scenario_id: int,
     scenario: ScenarioCreate,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     db_scenario = db.query(Scenario).filter(Scenario.id == scenario_id).first()
     if db_scenario is None:
@@ -83,7 +83,7 @@ def update_scenario(
 def delete_scenario(
     scenario_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     db_scenario = db.query(Scenario).filter(Scenario.id == scenario_id).first()
     if db_scenario is None:

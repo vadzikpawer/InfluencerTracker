@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from db.session import get_db
-from models.models import Publication, Project, Influencer
+from models.models import Publication, Project, Influencer, User
 from schemas.schemas import PublicationCreate, Publication as PublicationSchema
-from core.security import oauth2_scheme
+from core.security import get_current_user
 
 router = APIRouter()
 
@@ -12,7 +12,7 @@ router = APIRouter()
 def create_publication(
     publication: PublicationCreate,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     # Check if project exists
     project = db.query(Project).filter(Project.id == publication.project_id).first()
@@ -35,7 +35,7 @@ def read_publications(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     publications = db.query(Publication).offset(skip).limit(limit).all()
     return publications
@@ -44,7 +44,7 @@ def read_publications(
 def read_publication(
     publication_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     publication = db.query(Publication).filter(Publication.id == publication_id).first()
     if publication is None:
@@ -56,7 +56,7 @@ def update_publication(
     publication_id: int,
     publication: PublicationCreate,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     db_publication = db.query(Publication).filter(Publication.id == publication_id).first()
     if db_publication is None:
@@ -83,7 +83,7 @@ def update_publication(
 def delete_publication(
     publication_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     db_publication = db.query(Publication).filter(Publication.id == publication_id).first()
     if db_publication is None:

@@ -4,7 +4,7 @@ from typing import List
 from db.session import get_db
 from models.models import Comment, Project, User
 from schemas.schemas import CommentCreate, Comment as CommentSchema
-from core.security import oauth2_scheme
+from core.security import get_current_user
 
 router = APIRouter()
 
@@ -12,7 +12,7 @@ router = APIRouter()
 def create_comment(
     comment: CommentCreate,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     # Check if project exists
     project = db.query(Project).filter(Project.id == comment.project_id).first()
@@ -35,7 +35,7 @@ def read_comments(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     comments = db.query(Comment).offset(skip).limit(limit).all()
     return comments
@@ -44,7 +44,7 @@ def read_comments(
 def read_comment(
     comment_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if comment is None:
@@ -55,7 +55,7 @@ def read_comment(
 def delete_comment(
     comment_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     db_comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if db_comment is None:

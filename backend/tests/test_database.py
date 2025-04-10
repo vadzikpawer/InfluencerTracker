@@ -2,6 +2,7 @@ import pytest
 import os
 from sqlalchemy import inspect, text
 
+@pytest.mark.database
 def test_database_connection(db_session):
     """Test that the database connection is working and using SQLite."""
     # Ensure we're in test mode

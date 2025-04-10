@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from core.config import settings
 from core.security import verify_password, create_access_token, get_password_hash
 from db.session import get_db
-from models.models import User
+from models.models import User, Manager, Influencer
 from schemas.schemas import Token, UserCreate, User as UserSchema
 
 router = APIRouter()
@@ -26,6 +26,16 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         role=user.role
     )
     db.add(db_user)
+    if user.role == "manager":
+        db_manager = Manager(
+            user_id=db_user.id
+        )
+        db.add(db_manager)
+    else:
+        db_influencer = Influencer(
+            user_id=db_user.id
+        )
+        db.add(db_influencer)
     db.commit()
     db.refresh(db_user)
     return db_user

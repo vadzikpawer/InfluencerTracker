@@ -30,27 +30,35 @@ class User(Base):
     profile_image = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    influencer = relationship("Influencer", back_populates="user", uselist=False)
+class Manager(Base):
+    __tablename__ = "managers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+
+    influencers = relationship("Influencer", back_populates="manager")
+    projects = relationship("Project", back_populates="manager")
 
 class Influencer(Base):
     __tablename__ = "influencers"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    manager_id = Column(Integer, ForeignKey("managers.id"))
     nickname = Column(String)
     bio = Column(String)
-    instagram_handle = Column(String)
-    instagram_followers = Column(Integer)
-    tiktok_handle = Column(String)
-    tiktok_followers = Column(Integer)
-    youtube_handle = Column(String)
-    youtube_followers = Column(Integer)
-    telegram_handle = Column(String)
-    telegram_followers = Column(Integer)
-    vk_handle = Column(String)
-    vk_followers = Column(Integer)
-
-    user = relationship("User", back_populates="influencer")
+    instagram_handle = Column(String, nullable=True)
+    instagram_followers = Column(Integer, nullable=True)
+    tiktok_handle = Column(String, nullable=True)
+    tiktok_followers = Column(Integer, nullable=True)
+    youtube_handle = Column(String, nullable=True)
+    youtube_followers = Column(Integer, nullable=True)
+    telegram_handle = Column(String, nullable=True)
+    telegram_followers = Column(Integer, nullable=True)
+    vk_handle = Column(String, nullable=True)
+    vk_followers = Column(Integer, nullable=True)
+    
+    manager = relationship("Manager", back_populates="influencers")
     projects = relationship("ProjectInfluencer", back_populates="influencer")
 
 class Project(Base):
@@ -63,19 +71,19 @@ class Project(Base):
     key_requirements = Column(JSON)
     start_date = Column(DateTime, default=datetime.utcnow)
     deadline = Column(DateTime)
-    scenario_deadline = Column(DateTime)
-    material_deadline = Column(DateTime)
-    publication_deadline = Column(DateTime)
+    scenario_deadline = Column(DateTime, nullable=True)
+    material_deadline = Column(DateTime, nullable=True)
+    publication_deadline = Column(DateTime, nullable=True)
     status = Column(Enum(ProjectStatus), default=ProjectStatus.DRAFT)
     workflow_stage = Column(Enum(WorkflowStage), default=WorkflowStage.SCENARIO)
     budget = Column(Integer)
-    erid = Column(String)
-    manager_id = Column(Integer, ForeignKey("users.id"))
+    erid = Column(String, nullable=True)
+    manager_id = Column(Integer, ForeignKey("managers.id"))
     technical_links = Column(JSON)
     platforms = Column(JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    manager = relationship("User")
+    manager = relationship("Manager", back_populates="projects")
     influencers = relationship("ProjectInfluencer", back_populates="project")
 
 class ProjectInfluencer(Base):

@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from db.session import get_db
-from models.models import Material, Project, Influencer
+from models.models import Material, Project, Influencer, User
 from schemas.schemas import MaterialCreate, Material as MaterialSchema
-from core.security import oauth2_scheme
+from core.security import get_current_user
 
 router = APIRouter()
 
@@ -12,7 +12,7 @@ router = APIRouter()
 def create_material(
     material: MaterialCreate,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     # Check if project exists
     project = db.query(Project).filter(Project.id == material.project_id).first()
@@ -35,7 +35,7 @@ def read_materials(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     materials = db.query(Material).offset(skip).limit(limit).all()
     return materials
@@ -44,7 +44,7 @@ def read_materials(
 def read_material(
     material_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     material = db.query(Material).filter(Material.id == material_id).first()
     if material is None:
@@ -56,7 +56,7 @@ def update_material(
     material_id: int,
     material: MaterialCreate,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     db_material = db.query(Material).filter(Material.id == material_id).first()
     if db_material is None:
@@ -83,7 +83,7 @@ def update_material(
 def delete_material(
     material_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     db_material = db.query(Material).filter(Material.id == material_id).first()
     if db_material is None:

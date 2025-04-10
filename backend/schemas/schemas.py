@@ -1,12 +1,12 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from models.models import UserRole, ProjectStatus, WorkflowStage
 
 class UserBase(BaseModel):
     username: str
-    name: str
     email: str
+    name: Optional[str] = None
     role: UserRole
     profile_image: Optional[str] = None
 
@@ -20,6 +20,9 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
+class TokenPayload(BaseModel):
+    sub: Optional[str] = None
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -28,7 +31,7 @@ class TokenData(BaseModel):
     username: Optional[str] = None
 
 class InfluencerBase(BaseModel):
-    nickname: str
+    nickname: Optional[str] = None
     bio: Optional[str] = None
     instagram_handle: Optional[str] = None
     instagram_followers: Optional[int] = None
@@ -42,12 +45,14 @@ class InfluencerBase(BaseModel):
     vk_followers: Optional[int] = None
 
 class InfluencerCreate(InfluencerBase):
-    user_id: int
+    id: Optional[int] = None
+    user_id: Optional[int] = None
+    manager_id: Optional[int] = None
 
-class Influencer(InfluencerBase):
-    id: int
-    user_id: int
+    class Config:
+        from_attributes = True
 
+class InfluencerUpdate(InfluencerBase):
     class Config:
         from_attributes = True
 
@@ -55,7 +60,7 @@ class ProjectBase(BaseModel):
     title: str
     client: str
     description: Optional[str] = None
-    key_requirements: Optional[List[str]] = None
+    key_requirements: Optional[List[str]] = Field(default_factory=list)
     deadline: Optional[datetime] = None
     scenario_deadline: Optional[datetime] = None
     material_deadline: Optional[datetime] = None
@@ -65,8 +70,8 @@ class ProjectBase(BaseModel):
     budget: Optional[int] = None
     erid: Optional[str] = None
     manager_id: int
-    technical_links: Optional[List[Dict[str, str]]] = None
-    platforms: Optional[List[str]] = None
+    technical_links: Optional[List[Dict[str, str]]] = Field(default_factory=list)
+    platforms: Optional[List[str]] = Field(default_factory=list)
 
 class ProjectCreate(ProjectBase):
     pass
@@ -101,14 +106,14 @@ class ProjectInfluencer(ProjectInfluencerBase):
 class ScenarioBase(BaseModel):
     project_id: int
     influencer_id: int
-    content: str
+    content: Optional[str] = None
     google_doc_url: Optional[str] = None
-    status: Optional[str] = None
+    status: str = "pending"
     deadline: Optional[datetime] = None
     version: int = 1
 
 class ScenarioCreate(ScenarioBase):
-    pass
+    content: str
 
 class Scenario(ScenarioBase):
     id: int
@@ -121,14 +126,14 @@ class Scenario(ScenarioBase):
 class MaterialBase(BaseModel):
     project_id: int
     influencer_id: int
-    material_url: str
+    material_url: Optional[str] = None
     google_drive_url: Optional[str] = None
     description: Optional[str] = None
-    status: Optional[str] = None
+    status: str = "pending"
     deadline: Optional[datetime] = None
 
 class MaterialCreate(MaterialBase):
-    pass
+    material_url: str
 
 class Material(MaterialBase):
     id: int
@@ -143,11 +148,11 @@ class PublicationBase(BaseModel):
     influencer_id: int
     platform: str
     publication_url: str
-    published_at: datetime
-    status: Optional[str] = None
+    published_at: Optional[datetime] = None
+    status: str = "pending"
 
 class PublicationCreate(PublicationBase):
-    pass
+    published_at: datetime
 
 class Publication(PublicationBase):
     id: int
@@ -167,13 +172,14 @@ class CommentCreate(CommentBase):
 class Comment(CommentBase):
     id: int
     created_at: datetime
+    user: User
 
     class Config:
         from_attributes = True
 
 class ActivityBase(BaseModel):
-    project_id: int
-    user_id: int
+    project_id: Optional[int] = None
+    user_id: Optional[int] = None
     activity_type: str
     description: str
 
@@ -183,6 +189,7 @@ class ActivityCreate(ActivityBase):
 class Activity(ActivityBase):
     id: int
     created_at: datetime
+    user: Optional[User] = None
 
     class Config:
         from_attributes = True 

@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 
+@pytest.mark.auth
 def test_register_user(client):
     """Test user registration."""
     response = client.post(
@@ -20,6 +21,7 @@ def test_register_user(client):
     assert "id" in data
     assert "password" not in data
 
+@pytest.mark.auth
 def test_register_duplicate_username(client, test_user):
     """Test registration with an existing username."""
     response = client.post(
@@ -35,6 +37,7 @@ def test_register_duplicate_username(client, test_user):
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json()["detail"] == "Username already registered"
 
+@pytest.mark.auth
 def test_login_success(client, test_user):
     """Test successful login."""
     response = client.post(
@@ -46,6 +49,7 @@ def test_login_success(client, test_user):
     assert "access_token" in data
     assert data["token_type"] == "bearer"
 
+@pytest.mark.auth
 def test_login_wrong_username(client, test_user):
     """Test login with wrong username."""
     response = client.post(
@@ -55,6 +59,7 @@ def test_login_wrong_username(client, test_user):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json()["detail"] == "Incorrect username or password"
 
+@pytest.mark.auth
 def test_login_wrong_password(client, test_user):
     """Test login with wrong password."""
     response = client.post(

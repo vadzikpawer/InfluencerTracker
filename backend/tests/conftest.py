@@ -45,16 +45,42 @@ def client(db_session):
 # Fixture to create a test user
 @pytest.fixture(scope="function")
 def test_user(db_session):
-    user = User(
-        username="testuser",
-        email="test@example.com",
-        password=get_password_hash("password"),
-        role="manager"
-    )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
-    return user
+    db_user = db_session.query(User).filter(User.username == "testuser").first()
+    if not db_user:
+        db_user = User(
+            username="testuser",
+            email="test@example.com",
+            password=get_password_hash("password"),
+            role="manager"
+        )
+        db_session.add(db_user)
+        db_session.commit()
+        db_session.refresh(db_user)
+    return db_user
+
+@pytest.fixture(scope="function")
+def test_user_influencer(db_session, test_user):
+    db_user = db_session.query(User).filter(User.username == "testinfluencer").first()
+    if not db_user:
+        db_user = User(
+            username="testinfluencer",
+            email="test@example.com",
+            password=get_password_hash("password"),
+            role="influencer"
+        )
+        db_session.add(db_user)
+        db_session.commit()
+        db_session.refresh(db_user)
+    db_influencer = db_session.query(Influencer).filter(Influencer.user_id == db_user.id).first()
+    if not db_influencer:
+        db_influencer = Influencer(
+            user_id=db_user.id,
+            manager_id=test_user.id
+        )
+        db_session.add(db_influencer)
+        db_session.commit()
+        db_session.refresh(db_influencer)
+    return db_influencer
 
 # Fixture to get an authentication token for the test user
 @pytest.fixture(scope="function")
@@ -80,4 +106,32 @@ def test_project(db_session, test_user):
     db_session.add(project)
     db_session.commit()
     db_session.refresh(project)
-    return project 
+    return project
+
+# Fixture to create a test scenario
+@pytest.fixture(scope="function")
+def test_scenario(db_session, test_project, test_influencer):
+    scenario = Scenario(
+        project_id=test_project.id,
+        influencer_id=test_influencer.id,
+        content="Test Scenario Content",
+        status="approved"
+    )
+    db_session.add(scenario)
+    db_session.commit()
+    db_session.refresh(scenario)
+    return scenario
+
+# Fixture to create a test publication
+@pytest.fixture(scope="function")
+def test_publication(db_session, test_project, test_influencer):
+    publication = Publication(
+        project_id=test_project.id,
+        influencer_id=test_influencer.id,
+        content="Test Publication Content", # Assuming content field exists
+        status="published"
+    )
+    db_session.add(publication)
+    db_session.commit()
+    db_session.refresh(publication)
+    return publication 

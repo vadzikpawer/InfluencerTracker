@@ -1,6 +1,7 @@
 import pytest
 from fastapi import status
 
+@pytest.mark.comments
 def test_create_comment(client, test_token, test_user, test_project):
     """Test comment creation."""
     response = client.post(
@@ -20,6 +21,7 @@ def test_create_comment(client, test_token, test_user, test_project):
     assert "id" in data
     assert "created_at" in data
 
+@pytest.mark.comments
 def test_create_comment_nonexistent_project(client, test_token, test_user):
     """Test comment creation with non-existent project."""
     response = client.post(
@@ -34,6 +36,7 @@ def test_create_comment_nonexistent_project(client, test_token, test_user):
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "Project not found"
 
+@pytest.mark.comments
 def test_create_comment_nonexistent_user(client, test_token, test_project):
     """Test comment creation with non-existent user."""
     response = client.post(
@@ -48,6 +51,7 @@ def test_create_comment_nonexistent_user(client, test_token, test_project):
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "User not found"
 
+@pytest.mark.comments
 def test_read_comments(client, test_token, test_project):
     """Test retrieving all comments."""
     # First create a comment to ensure there's at least one
@@ -75,6 +79,7 @@ def test_read_comments(client, test_token, test_project):
     assert "project_id" in data[0]
     assert "user_id" in data[0]
 
+@pytest.mark.comments
 def test_read_comment(client, test_token, test_user, test_project):
     """Test retrieving a specific comment."""
     # First create a comment
@@ -102,6 +107,7 @@ def test_read_comment(client, test_token, test_user, test_project):
     assert data["project_id"] == test_project.id
     assert data["user_id"] == test_user.id
 
+@pytest.mark.comments
 def test_read_nonexistent_comment(client, test_token):
     """Test retrieving a non-existent comment."""
     response = client.get(
@@ -111,6 +117,7 @@ def test_read_nonexistent_comment(client, test_token):
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json()["detail"] == "Comment not found"
 
+@pytest.mark.comments
 def test_delete_comment(client, test_token, test_user, test_project):
     """Test deleting a comment."""
     # First create a comment
@@ -141,6 +148,7 @@ def test_delete_comment(client, test_token, test_user, test_project):
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
+@pytest.mark.comments
 def test_delete_nonexistent_comment(client, test_token):
     """Test deleting a non-existent comment."""
     response = client.delete(

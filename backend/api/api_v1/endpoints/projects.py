@@ -4,7 +4,7 @@ from typing import List
 from db.session import get_db
 from models.models import Project, User
 from schemas.schemas import ProjectCreate, Project as ProjectSchema
-from core.security import oauth2_scheme
+from core.security import get_current_user
 
 router = APIRouter()
 
@@ -12,7 +12,7 @@ router = APIRouter()
 def create_project(
     project: ProjectCreate,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     # Check if manager exists
     manager = db.query(User).filter(User.id == project.manager_id).first()
@@ -30,7 +30,7 @@ def read_projects(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     projects = db.query(Project).offset(skip).limit(limit).all()
     return projects
@@ -39,7 +39,7 @@ def read_projects(
 def read_project(
     project_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     project = db.query(Project).filter(Project.id == project_id).first()
     if project is None:
@@ -51,7 +51,7 @@ def update_project(
     project_id: int,
     project: ProjectCreate,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     db_project = db.query(Project).filter(Project.id == project_id).first()
     if db_project is None:
@@ -73,7 +73,7 @@ def update_project(
 def delete_project(
     project_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     db_project = db.query(Project).filter(Project.id == project_id).first()
     if db_project is None:

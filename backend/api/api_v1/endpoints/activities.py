@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from app.db.session import get_db
-from app.models.models import Activity, Project, User
-from app.schemas.schemas import ActivityCreate, Activity as ActivitySchema
-from app.core.security import oauth2_scheme
+from db.session import get_db
+from models.models import Activity, Project, User
+from schemas.schemas import ActivityCreate, Activity as ActivitySchema
+from core.security import get_current_user
 
 router = APIRouter()
 
@@ -12,7 +12,7 @@ router = APIRouter()
 def create_activity(
     activity: ActivityCreate,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     # Check if project exists
     project = db.query(Project).filter(Project.id == activity.project_id).first()
@@ -35,7 +35,7 @@ def read_activities(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     activities = db.query(Activity).offset(skip).limit(limit).all()
     return activities
@@ -44,7 +44,7 @@ def read_activities(
 def read_activity(
     activity_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     activity = db.query(Activity).filter(Activity.id == activity_id).first()
     if activity is None:
@@ -55,7 +55,7 @@ def read_activity(
 def delete_activity(
     activity_id: int,
     db: Session = Depends(get_db),
-    token: str = Depends(oauth2_scheme)
+    current_user: User = Depends(get_current_user)
 ):
     db_activity = db.query(Activity).filter(Activity.id == activity_id).first()
     if db_activity is None:
