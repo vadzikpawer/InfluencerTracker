@@ -12,15 +12,26 @@ A web application for managing influencer marketing campaigns, built with React,
 
 ```
 InfluencerTracker/
-├── app/                 # FastAPI backend
-└── client/             # React frontend
+├── backend/            # FastAPI backend
+│   ├── api/           # API endpoints
+│   ├── core/          # Core functionality
+│   ├── db/            # Database configuration
+│   ├── models/        # SQLAlchemy models
+│   ├── schemas/       # Pydantic schemas
+│   ├── tests/         # Backend tests
+│   └── main.py        # Application entry point
+├── client/            # React frontend
+│   ├── src/          # Source code
+│   ├── public/       # Static assets
+│   └── tests/        # Frontend tests
+└── server/           # Production server configuration
 ```
 
 ## Backend Setup
 
 1. Navigate to the backend directory:
    ```bash
-   cd app
+   cd backend
    ```
 
 2. Create a virtual environment:
@@ -40,14 +51,9 @@ InfluencerTracker/
    # Edit .env with your database credentials
    ```
 
-5. Run database migrations:
+5. Start the backend server:
    ```bash
-   alembic upgrade head
-   ```
-
-6. Start the backend server:
-   ```bash
-   uvicorn app.main:app --reload
+   uvicorn main:app --reload
    ```
 
 ## Frontend Setup
@@ -75,20 +81,59 @@ The application will be available at:
 ## Features
 
 - User authentication (login/register)
+- Role-based access control (Manager/Influencer)
 - Project management
-- Influencer tracking
+  - Create and manage projects
+  - Set deadlines and requirements
+  - Track project status
+- Influencer management
+  - Profile management
+  - Social media integration
+  - Follower tracking
+- Content workflow
+  - Scenario creation and approval
+  - Material submission and review
+  - Publication tracking
 - Activity monitoring
+  - Real-time updates
+  - Activity history
 - Comment system
+  - Threaded discussions
+  - @mentions
 - Multi-language support (i18n)
 
 ## Development
 
-- Frontend: React + TypeScript + Tailwind CSS
-- Backend: FastAPI + SQLAlchemy + PostgreSQL
-- State Management: React Query + Zustand
-- Routing: Wouter
-- Form Handling: React Hook Form + Zod
-- UI Components: Radix UI + Lucide Icons
+- Frontend:
+  - React + TypeScript
+  - Tailwind CSS for styling
+  - React Query for data fetching
+  - Zustand for state management
+  - Wouter for routing
+  - React Hook Form + Zod for forms
+  - Radix UI + Lucide Icons for components
+
+- Backend:
+  - FastAPI for API
+  - SQLAlchemy for ORM
+  - Pydantic for data validation
+  - JWT for authentication
+  - SQLite for development
+  - PostgreSQL for production
+
+## Testing
+
+Run backend tests:
+```bash
+cd backend
+pytest
+```
+
+Run frontend tests:
+```bash
+cd client
+npm test
+```
 
 ## Available Scripts
 
@@ -97,7 +142,14 @@ In the client directory:
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run lint` - Run ESLint
+- `npm run test` - Run tests
 - `npm run preview` - Preview production build
+
+In the backend directory:
+
+- `pytest` - Run all tests
+- `pytest -m <marker>` - Run tests with specific marker
+- `pytest --cov` - Run tests with coverage report
 
 ## Contributing
 
