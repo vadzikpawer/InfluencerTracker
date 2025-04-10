@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from app.db.session import get_db
-from app.models.models import Material, Project, Influencer
-from app.schemas.schemas import MaterialCreate, Material as MaterialSchema
-from app.core.security import oauth2_scheme
+from db.session import get_db
+from models.models import Material, Project, Influencer
+from schemas.schemas import MaterialCreate, Material as MaterialSchema
+from core.security import oauth2_scheme
 
 router = APIRouter()
 

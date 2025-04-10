@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from app.db.session import get_db
-from app.models.models import Comment, Project, User
-from app.schemas.schemas import CommentCreate, Comment as CommentSchema
-from app.core.security import oauth2_scheme
+from db.session import get_db
+from models.models import Comment, Project, User
+from schemas.schemas import CommentCreate, Comment as CommentSchema
+from core.security import oauth2_scheme
 
 router = APIRouter()
 

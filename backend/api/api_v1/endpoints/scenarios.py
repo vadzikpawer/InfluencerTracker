@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from app.db.session import get_db
-from app.models.models import Scenario, Project, Influencer
-from app.schemas.schemas import ScenarioCreate, Scenario as ScenarioSchema
-from app.core.security import oauth2_scheme
+from db.session import get_db
+from models.models import Scenario, Project, Influencer
+from schemas.schemas import ScenarioCreate, Scenario as ScenarioSchema
+from core.security import oauth2_scheme
 
 router = APIRouter()
 
