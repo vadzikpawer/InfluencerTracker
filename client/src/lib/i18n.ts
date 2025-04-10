@@ -293,8 +293,8 @@ const resources = {
 };
 
 i18n
-  .use(initReactI18next)
   .use(LanguageDetector)
+  .use(initReactI18next)
   .init({
     resources,
     lng: 'ru',
@@ -306,6 +306,10 @@ i18n
     interpolation: {
       escapeValue: false
     }
+  }).then(() => {
+    console.log('i18n initialized successfully'); 
+  }).catch(err => {
+    console.error('Error initializing i18n:', err);
   });
 
 export default i18n;

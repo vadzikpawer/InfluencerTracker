@@ -1,6 +1,18 @@
-import { useContext } from "react";
-import { AuthContext } from "@/contexts/auth-context";
+import { useAuthStore } from "@/contexts/auth";
+
+console.log('Loading use-auth hook with Zustand store');
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const { user, isAuthenticated, login, logout, register } = useAuthStore();
+  
+  console.log('Auth state:', { user, isAuthenticated });
+  
+  return {
+    user,
+    isAuthenticated,
+    isLoading: false,
+    login,
+    logout,
+    register
+  };
 };
