@@ -110,10 +110,10 @@ def test_project(db_session, test_user):
 
 # Fixture to create a test scenario
 @pytest.fixture(scope="function")
-def test_scenario(db_session, test_project, test_influencer):
+def test_scenario(db_session, test_project, test_user_influencer):
     scenario = Scenario(
         project_id=test_project.id,
-        influencer_id=test_influencer.id,
+        influencer_id=test_user_influencer.id,
         content="Test Scenario Content",
         status="approved"
     )
@@ -124,12 +124,13 @@ def test_scenario(db_session, test_project, test_influencer):
 
 # Fixture to create a test publication
 @pytest.fixture(scope="function")
-def test_publication(db_session, test_project, test_influencer):
+def test_publication(db_session, test_project, test_user_influencer):
     publication = Publication(
         project_id=test_project.id,
-        influencer_id=test_influencer.id,
+        influencer_id=test_user_influencer.id,
         content="Test Publication Content", # Assuming content field exists
-        status="published"
+        status="published",
+        platform="instagram"
     )
     db_session.add(publication)
     db_session.commit()

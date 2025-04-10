@@ -144,15 +144,19 @@ class Material(MaterialBase):
         from_attributes = True
 
 class PublicationBase(BaseModel):
-    project_id: int
-    influencer_id: int
-    platform: str
-    publication_url: str
+    project_id: int = None
+    influencer_id: int = None
+    platform: str = None
+    publication_url: Optional[str] = None
     published_at: Optional[datetime] = None
     status: str = "pending"
+    content: Optional[str] = None
 
 class PublicationCreate(PublicationBase):
     published_at: datetime
+
+    class Config:
+        from_attributes = True
 
 class Publication(PublicationBase):
     id: int

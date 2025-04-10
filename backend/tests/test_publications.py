@@ -4,27 +4,28 @@ from fastapi import status
 # Assuming Publication model/schema has project_id, influencer_id, content, status
 
 @pytest.mark.publications
-def test_create_publication(client, test_token, test_project, test_influencer):
+def test_create_publication(client, test_token, test_project, test_user_influencer):
     """Test publication creation."""
     response = client.post(
         "/api/v1/publications/",
         json={
             "project_id": test_project.id,
-            "influencer_id": test_influencer.id,
+            "influencer_id": test_user_influencer.id,
             "content": "Publication content for testing", # Adjust if field name is different
             "status": "pending",
-            "publication_links": [{"platform": "instagram", "url": "http://insta.test/pub1"}]
+            "platform": "instagram",
+            "publication_url": "http://insta.test/pub1",
+            "published_at": "2024-01-01T00:00:00Z"
         },
         headers={"Authorization": f"Bearer {test_token}"}
     )
-    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["project_id"] == test_project.id
-    assert data["influencer_id"] == test_influencer.id
+    assert data["influencer_id"] == test_user_influencer.id
     assert data["content"] == "Publication content for testing"
     assert data["status"] == "pending"
-    assert len(data["publication_links"]) == 1
-    assert data["publication_links"][0]["url"] == "http://insta.test/pub1"
+    assert data["publication_url"] == "http://insta.test/pub1"
     assert "id" in data
 
 @pytest.mark.publications
@@ -72,30 +73,32 @@ def test_update_publication(client, test_token, test_publication):
             "influencer_id": test_publication.influencer_id,
             "content": "Updated Publication Content",
             "status": "published",
-            "publication_links": [
-                {"platform": "instagram", "url": "http://insta.test/pub1_updated"},
-                {"platform": "tiktok", "url": "http://tiktok.test/pub2"}
-            ]
+            "platform": "instagram",
+            "publication_url": "http://insta.test/pub1_updated",
+            "published_at": "2024-01-01T00:00:00Z"
         },
         headers={"Authorization": f"Bearer {test_token}"}
     )
-    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["id"] == test_publication.id
     assert data["content"] == "Updated Publication Content"
     assert data["status"] == "published"
-    assert len(data["publication_links"]) == 2
+    assert data["publication_url"] == "http://insta.test/pub1_updated"
 
 @pytest.mark.publications
-def test_update_nonexistent_publication(client, test_token, test_project, test_influencer):
+def test_update_nonexistent_publication(client, test_token, test_project, test_user_influencer):
     """Test updating a non-existent publication."""
     response = client.put(
         "/api/v1/publications/999",
         json={
             "project_id": test_project.id,
-            "influencer_id": test_influencer.id,
+            "influencer_id": test_user_influencer.id,
+            "platform": "instagram",
             "content": "Non-existent publication",
-            "status": "pending"
+            "status": "pending",
+            "publication_url": "http://insta.test/pub1_updated",
+            "published_at": "2024-01-01T00:00:00Z"
         },
         headers={"Authorization": f"Bearer {test_token}"}
     )

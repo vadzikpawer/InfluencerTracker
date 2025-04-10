@@ -138,6 +138,7 @@ class Publication(Base):
     influencer_id = Column(Integer, ForeignKey("influencers.id"))
     platform = Column(String)
     publication_url = Column(String)
+    content = Column(String, nullable=True)
     published_at = Column(DateTime)
     status = Column(String)
     verified_at = Column(DateTime)
