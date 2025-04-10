@@ -6,6 +6,7 @@ from models.models import UserRole, ProjectStatus, WorkflowStage
 class UserBase(BaseModel):
     username: str
     name: str
+    email: str
     role: UserRole
     profile_image: Optional[str] = None
 
