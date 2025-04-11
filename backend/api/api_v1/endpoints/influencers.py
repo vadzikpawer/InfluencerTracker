@@ -18,6 +18,18 @@ def read_influencers(
     influencers = db.query(Influencer).filter(Influencer.manager_id == current_user.id).offset(skip).limit(limit).all()
     return influencers
 
+@router.post("/", response_model=InfluencerSchema)
+def create_influencer(
+    influencer: InfluencerSchema,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    db_influencer = Influencer(**influencer.model_dump())
+    db.add(db_influencer)
+    db.commit()
+    db.refresh(db_influencer)
+    return db_influencer
+
 @router.get("/{influencer_id}", response_model=InfluencerSchema)
 def read_influencer(
     influencer_id: int,

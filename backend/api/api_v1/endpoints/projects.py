@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from db.session import get_db
-from models.models import Project, User, Scenario, Activity, Publication
-from schemas.schemas import ProjectCreate, Project as ProjectSchema, PublicationCreate, WorkflowStageUpdate, Scenario as ScenarioSchema, ScenarioCreate, Publication as PublicationSchema, Activity as ActivitySchema
+from models.models import Project, User, Scenario, Activity, Publication, ProjectInfluencer
+from schemas.schemas import ProjectCreate, Project as ProjectSchema, PublicationCreate, WorkflowStageUpdate, Scenario as ScenarioSchema, ScenarioCreate, Publication as PublicationSchema, Activity as ActivitySchema, ProjectInfluencerCreate, ProjectInfluencer as ProjectInfluencerSchema, InfluencerCreate as InfluencerSchema
 from core.security import get_current_user
 from datetime import datetime
 
@@ -54,7 +54,7 @@ def read_projects(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    projects = db.query(Project).offset(skip).limit(limit).all()
+    projects = db.query(Project).filter(Project.manager_id == current_user.id).offset(skip).limit(limit).all()
     return projects
 
 @router.get("/{project_id}", response_model=ProjectSchema)
@@ -323,7 +323,30 @@ def update_project_publication(
 def read_project_activities(
     project_id: int,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 5,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if project_id == 0:
+        activities = db.query(Activity).order_by(Activity.created_at.desc()).offset(skip).limit(limit).all()
+    else:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+
+        activities = (
+            db.query(Activity)
+            .filter(Activity.project_id == project_id)
+            .order_by(Activity.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+    return activities
+
+@router.get("/{project_id}/influencers", response_model=List[InfluencerSchema])
+def read_project_influencers(
+    project_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -331,12 +354,33 @@ def read_project_activities(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    activities = (
-        db.query(Activity)
-        .filter(Activity.project_id == project_id)
-        .order_by(Activity.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
+    influencers = db.query(ProjectInfluencer).filter(ProjectInfluencer.project_id == project_id).all()
+    return influencers
+
+@router.post("/{project_id}/influencers", response_model=ProjectInfluencerSchema)
+def create_project_influencer(
+    project_id: int,
+    influencer: ProjectInfluencerCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    db_influencer = ProjectInfluencer(**influencer.dict())
+    db.add(db_influencer)
+    db.commit()
+    db.refresh(db_influencer)
+    
+    create_activity(
+        db=db,
+        project_id=project_id,
+        user_id=current_user.id,
+        activity_type="influencer_added",
+        description=f"Influencer '{db_influencer.influencer_id}' was added to project '{project_id}'"
     )
-    return activities
+    
+    return db_influencer
+
+    
