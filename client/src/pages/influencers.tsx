@@ -1,21 +1,21 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { useAuthStore } from "@/contexts/auth";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar } from "@/components/ui/avatar";
 import { SocialIcon } from "@/components/ui/social-icon";
-import { Search, Plus, UserPlus } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import { 
   Dialog, 
   DialogContent, 
   DialogDescription, 
   DialogFooter, 
   DialogHeader, 
-  DialogTitle,
-  DialogTrigger 
+  DialogTitle 
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -25,31 +25,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Influencer } from "@/lib/types";
+import { influencers as influencersApi } from "@/lib/api";
 
 export default function Influencers() {
   const { t } = useTranslation();
+  const user = useAuthStore((state) => state.user);
   const [searchTerm, setSearchTerm] = useState("");
   const [platformFilter, setPlatformFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    nickname: "",
+    bio: "",
+    instagram: "",
+    tiktok: ""
+  });
   
-  const { data: influencers, isLoading } = useQuery({
+  const queryClient = useQueryClient();
+
+  const { data: influencers, isLoading } = useQuery<Influencer[]>({
     queryKey: ["/api/influencers"],
+    queryFn: async () => {
+      const response = await influencersApi.list();
+      return response.map((influencer) => ({
+        ...influencer,
+        instagram_handle: influencer.instagram_handle,
+        tiktok_handle: influencer.tiktok_handle,
+        youtube_handle: influencer.youtube_handle,
+        telegram_handle: influencer.telegram_handle,
+        vk_handle: influencer.vk_handle,
+        instagram_followers: influencer.instagram_followers,
+        tiktok_followers: influencer.tiktok_followers,
+        youtube_followers: influencer.youtube_followers,
+        telegram_followers: influencer.telegram_followers,
+        vk_followers: influencer.vk_followers
+      }));
+    }
   });
 
-  const filteredInfluencers = influencers?.filter(influencer => {
+  const filteredInfluencers = influencers?.filter((influencer: Influencer) => {
     // Filter by search term
     const matchesSearch = 
-      influencer.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (influencer.bio && influencer.bio.toLowerCase().includes(searchTerm.toLowerCase()));
+      influencer.nickname.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Filter by platform
     const matchesPlatform = 
       platformFilter === "all" || 
-      (platformFilter === "instagram" && influencer.instagramHandle) ||
-      (platformFilter === "tiktok" && influencer.tiktokHandle) ||
-      (platformFilter === "youtube" && influencer.youtubeHandle) ||
-      (platformFilter === "telegram" && influencer.telegramHandle) ||
-      (platformFilter === "vk" && influencer.vkHandle);
+      (platformFilter === "instagram" && influencer.instagram_handle) ||
+      (platformFilter === "tiktok" && influencer.tiktok_handle) ||
+      (platformFilter === "youtube" && influencer.youtube_handle) ||
+      (platformFilter === "telegram" && influencer.telegram_handle) ||
+      (platformFilter === "vk" && influencer.vk_handle);
     
     return matchesSearch && matchesPlatform;
   });
@@ -64,6 +90,23 @@ export default function Influencers() {
     }
     return count.toString();
   };
+
+  const { mutate: addInfluencer } = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      return await influencersApi.create({
+        nickname: data.nickname,
+        instagram_handle: data.instagram,
+        tiktok_handle: data.tiktok,
+        manager_id: user?.id
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/influencers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects/${id}/influencers"] });
+      setIsAddDialogOpen(false);
+      setFormData({ nickname: "", bio: "", instagram: "", tiktok: "" });
+    }
+  });
 
   return (
     <PageContainer
@@ -97,9 +140,6 @@ export default function Influencers() {
               <SelectItem value="all">{t("all_platforms")}</SelectItem>
               <SelectItem value="instagram">Instagram</SelectItem>
               <SelectItem value="tiktok">TikTok</SelectItem>
-              <SelectItem value="youtube">YouTube</SelectItem>
-              <SelectItem value="telegram">Telegram</SelectItem>
-              <SelectItem value="vk">ВКонтакте</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -131,59 +171,29 @@ export default function Influencers() {
             <Card key={influencer.id} className="bg-white dark:bg-neutral-900/30 p-4 border border-neutral-200/50 dark:border-neutral-800/50">
               <div className="flex items-start">
                 <Avatar className="h-16 w-16 mr-4 bg-neutral-200 dark:bg-neutral-800">
-                  <div className="text-lg font-medium">
+                  <div className="text-lg font-medium w-full h-full flex items-center justify-center">
                     {influencer.nickname.substring(0, 2).toUpperCase()}
                   </div>
                 </Avatar>
                 
                 <div>
                   <h3 className="font-bold mb-1">{influencer.nickname}</h3>
-                  <p className="text-sm text-neutral-700/70 dark:text-neutral-300/70 mb-3 line-clamp-2">
-                    {influencer.bio || t("no_bio")}
-                  </p>
                   
                   <div className="flex flex-wrap gap-3">
-                    {influencer.instagramHandle && (
+                    {influencer.instagram_handle && (
                       <div className="flex items-center" title="Instagram">
                         <SocialIcon platform="instagram" size="sm" className="mr-1.5" />
                         <span className="text-xs font-medium">
-                          {formatFollowers(influencer.instagramFollowers)}
+                          {formatFollowers(influencer.instagram_followers)}
                         </span>
                       </div>
                     )}
                     
-                    {influencer.tiktokHandle && (
+                    {influencer.tiktok_handle && (
                       <div className="flex items-center" title="TikTok">
                         <SocialIcon platform="tiktok" size="sm" className="mr-1.5" />
                         <span className="text-xs font-medium">
-                          {formatFollowers(influencer.tiktokFollowers)}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {influencer.youtubeHandle && (
-                      <div className="flex items-center" title="YouTube">
-                        <SocialIcon platform="youtube" size="sm" className="mr-1.5" />
-                        <span className="text-xs font-medium">
-                          {formatFollowers(influencer.youtubeFollowers)}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {influencer.telegramHandle && (
-                      <div className="flex items-center" title="Telegram">
-                        <SocialIcon platform="telegram" size="sm" className="mr-1.5" />
-                        <span className="text-xs font-medium">
-                          {formatFollowers(influencer.telegramFollowers)}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {influencer.vkHandle && (
-                      <div className="flex items-center" title="ВКонтакте">
-                        <SocialIcon platform="vk" size="sm" className="mr-1.5" />
-                        <span className="text-xs font-medium">
-                          {formatFollowers(influencer.vkFollowers)}
+                          {formatFollowers(influencer.tiktok_followers)}
                         </span>
                       </div>
                     )}
@@ -222,6 +232,8 @@ export default function Influencers() {
               </label>
               <Input
                 id="nickname"
+                value={formData.nickname}
+                onChange={(e) => setFormData(prev => ({ ...prev, nickname: e.target.value }))}
                 placeholder="influencer_name"
                 className="col-span-3"
               />
@@ -233,6 +245,8 @@ export default function Influencers() {
               </label>
               <Input
                 id="bio"
+                value={formData.bio}
+                onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
                 placeholder={t("influencer_bio")}
                 className="col-span-3"
               />
@@ -244,6 +258,8 @@ export default function Influencers() {
               </label>
               <Input
                 id="instagram"
+                value={formData.instagram}
+                onChange={(e) => setFormData(prev => ({ ...prev, instagram: e.target.value }))}
                 placeholder="username"
                 className="col-span-3"
               />
@@ -255,6 +271,8 @@ export default function Influencers() {
               </label>
               <Input
                 id="tiktok"
+                value={formData.tiktok}
+                onChange={(e) => setFormData(prev => ({ ...prev, tiktok: e.target.value }))}
                 placeholder="username"
                 className="col-span-3"
               />
@@ -262,10 +280,17 @@ export default function Influencers() {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsAddDialogOpen(false);
+              setFormData({ nickname: "", bio: "", instagram: "", tiktok: "" });
+            }}>
               {t("cancel")}
             </Button>
-            <Button className="bg-primary text-white">
+            <Button 
+              className="bg-primary text-white"
+              onClick={() => addInfluencer(formData)}
+              disabled={!formData.nickname}
+            >
               {t("add_influencer")}
             </Button>
           </DialogFooter>

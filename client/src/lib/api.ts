@@ -34,6 +34,8 @@ interface PublicationUpdate extends Partial<Omit<Publication, 'id' | 'created_at
 interface InfluencerCreate extends Omit<Influencer, 'id' | 'created_at'> {}
 interface InfluencerUpdate extends Partial<Omit<Influencer, 'id' | 'created_at'>> {}
 
+interface ProjectInfluencerCreate extends Omit<ProjectInfluencer, 'id' | 'created_at'> {}
+
 const api = axios.create({
   baseURL: '/api/v1',
   headers: {
@@ -197,11 +199,29 @@ export const publications = {
 };
 
 export const influencers = {
+  list: async (): Promise<Influencer[]> => {
+    const response = await api.get<Influencer[]>(`/influencers/`);
+    return response.data;
+  },
+  create: async (influencer: InfluencerCreate): Promise<Influencer> => {
+    const response = await api.post<Influencer>(`/influencers/`, influencer);
+    return response.data;
+  },
+  update: async (influencerId: number, influencer: InfluencerUpdate): Promise<Influencer> => {
+    const response = await api.put<Influencer>(`/influencers/${influencerId}`, influencer);
+    return response.data;
+  },
+  delete: async (influencerId: number): Promise<void> => {
+    await api.delete(`/influencers/${influencerId}`);
+  }
+};
+
+export const projectInfluencers = {
   list: async (projectId: number): Promise<Influencer[]> => {
     const response = await api.get<Influencer[]>(`/projects/${projectId}/influencers`);
     return response.data;
   },
-  create: async (projectId: number, influencer: InfluencerCreate): Promise<Influencer> => {
+  create: async (projectId: number, influencer: ProjectInfluencerCreate): Promise<Influencer> => {
     const response = await api.post<Influencer>(`/projects/${projectId}/influencers`, influencer);
     return response.data;
   },

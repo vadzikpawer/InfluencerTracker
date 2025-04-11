@@ -102,9 +102,16 @@ export interface Publication {
 export interface Influencer {
   id: number;
   nickname: string;
+  manager_id?: number;
   instagram_handle?: string;
   tiktok_handle?: string;
   instagram_followers?: number;
   tiktok_followers?: number;
+  youtube_handle?: string;
+  youtube_followers?: number;
+  telegram_handle?: string;
+  telegram_followers?: number;
+  vk_handle?: string;
+  vk_followers?: number;
   created_at: string;
 } 

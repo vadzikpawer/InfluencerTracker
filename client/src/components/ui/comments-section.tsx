@@ -89,7 +89,7 @@ export function Comments({ projectId, comments, className }: CommentsProps) {
         {comments.map((comment) => (
           <div key={comment.id} className="flex">
             <Avatar className="w-8 h-8 mr-3 flex-shrink-0 bg-neutral-200 dark:bg-neutral-800">
-              <div className="flex items-center justify-center text-xs font-medium">
+              <div className="w-full h-full flex items-center justify-center text-sm font-medium">
                 {comment.user ? getInitials(comment.user.name) : "??"}
               </div>
             </Avatar>
@@ -120,8 +120,8 @@ export function Comments({ projectId, comments, className }: CommentsProps) {
       {user && (
         <div className="flex">
           <Avatar className="w-8 h-8 mr-3 flex-shrink-0 bg-neutral-200 dark:bg-neutral-800">
-            <div className="flex items-center justify-center text-xs font-medium">
-              {getInitials(user.name)}
+            <div className="w-full h-full flex items-center justify-center text-sm font-medium">
+              {user?.email?.substring(0, 2).toUpperCase()}
             </div>
           </Avatar>
           

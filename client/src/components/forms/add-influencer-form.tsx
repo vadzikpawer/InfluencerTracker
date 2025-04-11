@@ -1,14 +1,13 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import { Influencer } from "@shared/schema";
+import { Influencer } from "@/lib/types";
+import { influencers as InfluencersApi, projectInfluencers as ProjectInfluencersApi } from "@/lib/api";
 
 interface AddInfluencerFormProps {
   projectId: number;
@@ -22,14 +21,17 @@ export function AddInfluencerForm({ projectId, onSuccess }: AddInfluencerFormPro
 
   const { data: influencers = [], isLoading: isLoadingInfluencers } = useQuery<Influencer[]>({
     queryKey: ["/api/influencers"],
+    queryFn: async (): Promise<Influencer[]> => InfluencersApi.list()
   });
 
   const addInfluencerMutation = useMutation({
     mutationFn: async (influencerId: number) => {
-      const res = await apiRequest("POST", `/api/projects/${projectId}/influencers`, {
-        influencerId
+      return await ProjectInfluencersApi.create(projectId, {  
+        influencer_id: influencerId,
+        scenario_status: "pending",
+        material_status: "pending",
+        publication_status: "pending"
       });
-      return await res.json();
     },
     onSuccess: () => {
       toast({

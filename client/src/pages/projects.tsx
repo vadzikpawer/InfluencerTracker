@@ -131,7 +131,7 @@ export default function Projects() {
               materialStatus={project.workflow_stage === "material" ? "in_review" : "pending"}
               publicationStatus="pending"
               deadline={project.deadline ? new Date(project.deadline) : undefined}
-              influencers={[{ initials: "ЕК", name: "Екатерина Котова" }]}
+              influencers={[]}
             />
           ))}
         </div>

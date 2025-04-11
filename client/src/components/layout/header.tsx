@@ -69,8 +69,8 @@ export function Header() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Avatar className="w-8 h-8 cursor-pointer bg-neutral-200 dark:bg-neutral-800">
-                    <div className="flex items-center justify-center text-xs font-medium">
-                      {user.name ? getInitials(user.name) : "U"}
+                    <div className="w-full h-full flex items-center justify-center text-sm font-medium">
+                      {user?.email?.substring(0, 2).toUpperCase()}
                     </div>
                   </Avatar>
                 </DropdownMenuTrigger>
