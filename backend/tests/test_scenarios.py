@@ -120,4 +120,28 @@ def test_delete_nonexistent_scenario(client, test_token):
         headers={"Authorization": f"Bearer {test_token}"}
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert response.json()["detail"] == "Scenario not found" 
+    assert response.json()["detail"] == "Scenario not found"
+
+@pytest.mark.scenarios
+def test_read_project_scenarios(client, test_token, test_project, test_scenario):
+    """Test retrieving scenarios for a specific project."""
+    response = client.get(
+        f"/api/v1/scenarios/project/{test_project.id}",
+        headers={"Authorization": f"Bearer {test_token}"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) > 0
+    assert any(sc["id"] == test_scenario.id for sc in data)
+    assert all(sc["project_id"] == test_project.id for sc in data)
+
+@pytest.mark.scenarios
+def test_read_project_scenarios_nonexistent_project(client, test_token):
+    """Test retrieving scenarios for a non-existent project."""
+    response = client.get(
+        "/api/v1/scenarios/project/999",
+        headers={"Authorization": f"Bearer {test_token}"}
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Project not found" 

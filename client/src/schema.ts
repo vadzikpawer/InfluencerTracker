@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -88,7 +88,7 @@ export const scenarios = pgTable("scenarios", {
   projectId: integer("project_id").references(() => projects.id).notNull(),
   influencerId: integer("influencer_id").references(() => influencers.id).notNull(),
   content: text("content").notNull(),
-  googleDocUrl: text("google_doc_url"),
+  google_doc_url: text("google_doc_url"),
   status: text("status", { enum: ["added", "under_approval", "approved", "rejected"] }).default("added").notNull(),
   submittedAt: timestamp("submitted_at"),
   approvedAt: timestamp("approved_at"),

@@ -9,6 +9,8 @@ import { ProjectCard } from "@/components/ui/project-card";
 import { Link } from "wouter";
 import { ArrowUp, Clock, UserPlus, CheckCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Project, Activity } from "@/lib/types";
+import { projects as projectsApi, activities as activitiesApi } from "@/lib/api";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -19,20 +21,29 @@ export default function Dashboard() {
     enabled: !!user && user.role === "manager",
   });
 
-  const { data: activities, isLoading: isLoadingActivities } = useQuery({
-    queryKey: ["/api/activities/recent"],
+  const { data: activities, isLoading: isLoadingActivities } = useQuery<Activity[]>({
+    queryKey: ["activities"],
+    queryFn: async () => {
+      const apiActivities = await activitiesApi.list(0);
+      return apiActivities.map(activity => ({
+        ...activity,
+        activityType: activity.activity_type,
+        createdAt: activity.created_at
+      }));
+    },
     enabled: !!user,
   });
   
-  const { data: projects, isLoading: isLoadingProjects } = useQuery({
-    queryKey: ["/api/projects"],
+  const { data: projects, isLoading: isLoadingProjects } = useQuery<Project[]>({
+    queryKey: ["projects"],
+    queryFn: async () => projectsApi.list(),
     enabled: !!user,
   });
 
   // Filter projects requiring attention
   const urgentProjects = projects?.filter(project => 
     project.status === "active" && 
-    (project.workflowStage === "scenario" || project.workflowStage === "material")
+    (project.workflow_stage === "scenario" || project.workflow_stage === "material")
   ).slice(0, 2);
 
   const renderStatCards = () => {
@@ -124,7 +135,11 @@ export default function Dashboard() {
     return activities.map((activity) => (
       <ActivityCard 
         key={activity.id} 
-        activity={activity} 
+        activity={{
+          ...activity,
+          activityType: activity.activity_type,
+          createdAt: activity.created_at
+        }}
         className="border-b border-neutral-200/50 dark:border-neutral-800/50"
       />
     ));
@@ -163,18 +178,17 @@ export default function Dashboard() {
         title={project.title}
         client={project.client}
         status={project.status}
-        workflowStage={project.workflowStage}
-        platforms={project.platforms}
+        workflowStage={project.workflow_stage}
+        platforms={project.platforms || []}
         scenarioStatus="approved"
         materialStatus="in_review"
         publicationStatus="pending"
-        deadline={new Date(project.deadline)}
+        deadline={new Date(project.deadline || "")}
         actionRequired={{
           required: true,
-          message: project.workflowStage === "scenario" 
+          message: project.workflow_stage === "scenario" 
             ? t("scenario_needs_review") 
             : t("material_needs_review"),
-          urgent: true
         }}
       />
     ));

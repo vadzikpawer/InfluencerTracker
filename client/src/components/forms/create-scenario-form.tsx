@@ -4,7 +4,6 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -30,11 +29,13 @@ import {
 } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { scenarios as ScenariosApi } from "@/lib/api";
+import { queryClient } from "@/lib/queryClient";
 
 const formSchema = z.object({
-  content: z.string().min(10, { message: "Содержание должно содержать не менее 10 символов" }),
-  googleDocUrl: z.string().url({ message: "Необходимо ввести корректный URL" }).optional().or(z.literal("")),
-  deadline: z.date().nullable().optional(),
+  content: z.string().min(1, { message: "Необходимо ввести текст сценария" }),
+  google_doc_url: z.string().url({ message: "Необходимо ввести корректный URL" }).optional().or(z.literal("")),
+  deadline: z.date().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -53,18 +54,19 @@ export function CreateScenarioForm({ projectId, onSuccess }: CreateScenarioFormP
     resolver: zodResolver(formSchema),
     defaultValues: {
       content: "",
-      googleDocUrl: "",
+      google_doc_url: "",
       deadline: null,
     },
   });
 
   const createScenarioMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      const res = await apiRequest("POST", `/api/projects/${projectId}/scenarios`, {
-        ...data,
-        status: "added"
+      await ScenariosApi.create(projectId, {
+        content: data.content,
+        google_doc_url: data.google_doc_url || undefined,
+        deadline: data.deadline?.toISOString(),
+        project_id: projectId,
       });
-      return await res.json();
     },
     onSuccess: () => {
       toast({
@@ -110,7 +112,7 @@ export function CreateScenarioForm({ projectId, onSuccess }: CreateScenarioFormP
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-2">
             <FormField
               control={form.control}
-              name="googleDocUrl"
+              name="google_doc_url"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t('google_doc_url')}</FormLabel>

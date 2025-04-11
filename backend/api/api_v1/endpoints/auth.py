@@ -3,13 +3,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from core.config import settings
-from core.security import verify_password, create_access_token, get_password_hash
+from core.security import verify_password, create_access_token, get_password_hash, get_current_user
 from db.session import get_db
 from models.models import User, Manager, Influencer
 from schemas.schemas import Token, UserCreate, User as UserSchema
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/login")
+
+@router.get("/me", response_model=UserSchema)
+def get_current_user_info(current_user: User = Depends(get_current_user)):
+    return current_user
 
 @router.post("/register", response_model=UserSchema)
 def register(user: UserCreate, db: Session = Depends(get_db)):
@@ -25,6 +29,8 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         role=user.role
     )
     db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
     if user.role == "manager":
         db_manager = Manager(
             user_id=db_user.id

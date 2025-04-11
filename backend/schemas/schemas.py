@@ -10,6 +10,9 @@ class UserBase(BaseModel):
     role: UserRole
     profile_image: Optional[str] = None
 
+class WorkflowStageUpdate(BaseModel):
+    workflow_stage: WorkflowStage
+
 class UserCreate(UserBase):
     password: str
 
@@ -26,6 +29,7 @@ class TokenPayload(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    user: User
 
 class TokenData(BaseModel):
     username: Optional[str] = None
@@ -106,12 +110,11 @@ class ProjectInfluencer(ProjectInfluencerBase):
 
 class ScenarioBase(BaseModel):
     project_id: int
-    influencer_id: int
+    influencer_id: Optional[int] = None
     content: Optional[str] = None
     google_doc_url: Optional[str] = None
     status: str = "pending"
     deadline: Optional[datetime] = None
-    version: int = 1
 
 class ScenarioCreate(ScenarioBase):
     content: str

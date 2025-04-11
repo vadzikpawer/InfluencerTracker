@@ -16,7 +16,6 @@ import { UserRole } from "@/lib/types";
 export default function Register() {
   const { t } = useTranslation();
   const { register } = useAuth();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
 

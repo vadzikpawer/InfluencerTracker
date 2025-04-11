@@ -4,7 +4,6 @@ export enum UserRole {
 }
 
 export enum ProjectStatus {
-  DRAFT = "draft",
   ACTIVE = "active",
   COMPLETED = "completed",
 }
@@ -22,6 +21,7 @@ export interface User {
   role: UserRole;
   profile_image?: string;
   created_at: string;
+  email?: string;
 }
 
 export interface Project {
@@ -47,10 +47,10 @@ export interface Project {
 
 export interface Comment {
   id: number;
-  project_id: number;
-  user_id: number;
+  projectId: number;
+  userId: number;
   content: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export interface Activity {
@@ -65,14 +65,14 @@ export interface Activity {
 export interface Scenario {
   id: number;
   project_id: number;
-  influencer_id: number;
+  influencer_id?: number;
   content: string;
   google_doc_url?: string;
   status?: string;
+  created_at?: string;
   submitted_at?: string;
   approved_at?: string;
   deadline?: string;
-  version: number;
 }
 
 export interface Material {
@@ -97,4 +97,14 @@ export interface Publication {
   published_at: string;
   status?: string;
   verified_at?: string;
+}
+
+export interface Influencer {
+  id: number;
+  nickname: string;
+  instagram_handle?: string;
+  tiktok_handle?: string;
+  instagram_followers?: number;
+  tiktok_followers?: number;
+  created_at: string;
 } 

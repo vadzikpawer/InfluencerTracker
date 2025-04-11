@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { PageContainer } from "@/components/layout/page-container";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SocialIcon } from "@/components/ui/social-icon";
@@ -11,7 +11,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Comments } from "@/components/ui/comments-section";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus, ChevronRight, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, FileText, Image, Share2, ExternalLink, Paperclip, Plus, Trash2, Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AddInfluencerForm } from "@/components/forms/add-influencer-form";
 import { CreateScenarioForm } from "@/components/forms/create-scenario-form";
@@ -19,11 +19,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Project, Activity, Comment, Influencer } from "@shared/schema";
-import { useAuth } from "@/contexts/AuthContext";
-import axios from "axios";
+import { Project, Activity, Comment, Influencer, Scenario, WorkflowStage } from "@/lib/types";
+import { projects as ProjectsApi, scenarios as ScenariosApi, activities as ActivitiesApi, comments as CommentsApi, publications as PublicationsApi, influencers as InfluencersApi } from "@/lib/api";
 
 interface ProjectDetailProps {
   id: string;
@@ -32,7 +31,6 @@ interface ProjectDetailProps {
 export default function ProjectDetail({ id }: ProjectDetailProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { user } = useAuth();
   const [_, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<"scenario" | "material" | "publication">("scenario");
   const [addInfluencerDialogOpen, setAddInfluencerDialogOpen] = useState(false);
@@ -41,41 +39,31 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   
   const { data: project = {} as Project, isLoading: isLoadingProject } = useQuery<Project>({
     queryKey: [`/api/projects/${id}`],
+    queryFn: async (): Promise<Project> => ProjectsApi.get(Number(id))
   });
   
   const { data: influencers = [] as Influencer[], isLoading: isLoadingInfluencers } = useQuery<Influencer[]>({
     queryKey: [`/api/projects/${id}/influencers`],
+    queryFn: async (): Promise<Influencer[]> => InfluencersApi.list(Number(id))
   });
   
-  const { data: comments = [] as Comment[], isLoading: isLoadingComments } = useQuery<Comment[]>({
+  const { data: comments = [] as Comment[] } = useQuery<Comment[]>({
     queryKey: [`/api/projects/${id}/comments`],
+    queryFn: async (): Promise<Comment[]> => CommentsApi.list(Number(id))
   });
   
-  const { data: activities = [] as Activity[], isLoading: isLoadingActivities } = useQuery<Activity[]>({
+  const { data: activities = [] as Activity[] } = useQuery<Activity[]>({
     queryKey: [`/api/projects/${id}/activities`],
+    queryFn: async (): Promise<Activity[]> => ActivitiesApi.list(Number(id))
   });
-  
-  interface Scenario {
-    id: number;
-    projectId: number;
-    influencerId: number;
-    content: string;
-    googleDocUrl?: string;
-    status: string;
-    submittedAt?: string;
-    approvedAt?: string;
-    version: number;
-  }
   
   const { data: scenarios = [] as Scenario[], isLoading: isLoadingScenarios } = useQuery<Scenario[]>({
     queryKey: [`/api/projects/${id}/scenarios`],
+    queryFn: async (): Promise<Scenario[]> => ScenariosApi.list(Number(id))
   });
   
   const updateWorkflowStageMutation = useMutation({
-    mutationFn: async (stage: string) => {
-      const res = await apiRequest("POST", `/api/projects/${id}/workflow-stage`, { stage });
-      return await res.json();
-    },
+    mutationFn: (stage: WorkflowStage) => ProjectsApi.updateWorkflowStage(Number(id), stage),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/activities`] });
@@ -95,11 +83,11 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   
   const approveScenarioMutation = useMutation({
     mutationFn: async (scenarioId: number) => {
-      const res = await apiRequest("PATCH", `/api/projects/${id}/scenarios/${scenarioId}`, { 
+      const res = await ScenariosApi.update(Number(id), scenarioId, { 
         status: "approved",
-        approvedAt: new Date().toISOString()
+        approved_at: new Date().toISOString()
       });
-      return await res.json();
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/scenarios`] });
@@ -111,8 +99,8 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       });
       
       // Update project workflow stage to material if we're still in scenario stage
-      if (project.workflowStage === 'scenario') {
-        updateWorkflowStageMutation.mutate('material');
+      if (project?.workflow_stage === WorkflowStage.SCENARIO) {
+        updateWorkflowStageMutation.mutate(WorkflowStage.MATERIAL);
       }
     },
     onError: (error) => {
@@ -126,11 +114,12 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   
   const deleteScenarioMutation = useMutation({
     mutationFn: async (scenarioId: number) => {
-      const res = await apiRequest("DELETE", `/api/projects/${id}/scenarios/${scenarioId}`);
-      if (!res.ok) {
+      try {
+        await ScenariosApi.delete(Number(id), scenarioId);
+        return scenarioId;
+      } catch (error) {
         throw new Error(t("delete_scenario_error"));
       }
-      return scenarioId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${id}/scenarios`] });
@@ -152,12 +141,18 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
   
   const deleteProjectMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("DELETE", `/api/projects/${id}`);
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Ошибка при удалении проекта");
+      try {
+        const res = await ProjectsApi.delete(Number(id));
+        return res.data;
+      } catch (error: unknown) {
+        if (error && typeof error === 'object' && 'response' in error &&
+            error.response && typeof error.response === 'object' && 'data' in error.response &&
+            error.response.data && typeof error.response.data === 'object' && 'message' in error.response.data &&
+            typeof error.response.data.message === 'string') {
+          throw new Error(error.response.data.message);
+        }
+        throw new Error(t("project_delete_error")); 
       }
-      return await res.json();
     },
     onSuccess: () => {
       // Invalidate the projects query cache so the list gets refreshed
@@ -183,8 +178,14 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
 
   const submitPublicationsMutation = useMutation({
     mutationFn: async (publications: { platform: string; publicationUrl: string }[]) => {
-      const response = await axios.post(`/api/projects/${id}/publications`, { publications });
-      return response.data;
+      const response = await PublicationsApi.create(Number(id), {
+        project_id: Number(id),
+        influencer_id: 0, // This should be set to the actual influencer ID
+        platform: publications[0].platform,
+        publication_url: publications[0].publicationUrl,
+        published_at: new Date().toISOString()
+      });
+      return response;
     },
     onSuccess: () => {
       toast({
@@ -194,7 +195,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
       // Reset form
       setPublicationUrls({});
     },
-    onError: (error) => {
+    onError: () => {
       toast({
         title: t("error"),
         description: t("publication_submit_error"),
@@ -293,18 +294,18 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
 
   const timelineItems = activities?.map(activity => {
     const getStatus = () => {
-      if (activity.activityType.includes('approved') || 
-          activity.activityType.includes('published') || 
-          activity.activityType.includes('verified')) return 'completed';
-      if (activity.activityType.includes('created') || 
-          activity.activityType.includes('updated') || 
-          activity.activityType.includes('submitted')) return 'active';
+      if (activity.activity_type.includes('approved') || 
+          activity.activity_type.includes('published') || 
+          activity.activity_type.includes('verified')) return 'completed';
+      if (activity.activity_type.includes('created') || 
+          activity.activity_type.includes('updated') || 
+          activity.activity_type.includes('submitted')) return 'active';
       return 'pending';
     };
 
     return {
-      title: activity.activityType,
-      date: activity.createdAt,
+      title: activity.activity_type,
+      date: activity.created_at,
       status: getStatus() as 'completed' | 'active' | 'pending'
     };
   }) || [];
@@ -313,31 +314,31 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
     timelineItems.push(
       {
         title: 'project_created',
-        date: project.createdAt,
+        date: project.created_at,
         status: 'completed'
       }
     );
     
-    if (project.workflowStage === 'scenario' || project.workflowStage === 'material' || project.workflowStage === 'publication') {
+    if (project.workflow_stage === 'scenario' || project.workflow_stage === 'material' || project.workflow_stage === 'publication') {
       timelineItems.push({
         title: 'scenario_phase',
-        date: new Date(),
-        status: project.workflowStage === 'scenario' ? 'active' : 'completed'
+        date: project.created_at,
+        status: project.workflow_stage === 'scenario' ? 'active' : 'completed'
       });
     }
     
-    if (project.workflowStage === 'material' || project.workflowStage === 'publication') {
+    if (project.workflow_stage === 'material' || project.workflow_stage === 'publication') {
       timelineItems.push({
         title: 'material_phase',
-        date: new Date(),
-        status: project.workflowStage === 'material' ? 'active' : 'completed'
+        date: project.created_at,
+        status: project.workflow_stage === 'material' ? 'active' : 'completed'
       });
     }
     
-    if (project.workflowStage === 'publication') {
+    if (project.workflow_stage === 'publication') {
       timelineItems.push({
         title: 'publication_phase',
-        date: new Date(),
+        date: project.created_at,
         status: 'active'
       });
     }
@@ -423,15 +424,15 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
           <div className="ml-auto flex items-center">
             <span className="text-sm mr-2">{t('project_stage')}:</span>
             <Select 
-              value={project.workflowStage} 
-              onValueChange={(value) => updateWorkflowStageMutation.mutate(value)}
+              value={project.workflow_stage} 
+              onValueChange={(value) => updateWorkflowStageMutation.mutate(value as WorkflowStage)}
               disabled={updateWorkflowStageMutation.isPending}
             >
               <SelectTrigger className="w-36 h-9 border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/50">
                 <SelectValue>
-                  {project.workflowStage === 'scenario' && t('scenario')}
-                  {project.workflowStage === 'material' && t('material')}
-                  {project.workflowStage === 'publication' && t('publication')}
+                  {project.workflow_stage === 'scenario' && t('scenario')}
+                  {project.workflow_stage === 'material' && t('material')}
+                  {project.workflow_stage === 'publication' && t('publication')}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -479,9 +480,9 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                   </p>
                   
                   <h4 className="font-medium mb-2">{t('key_requirements')}:</h4>
-                  {project.keyRequirements && project.keyRequirements.length > 0 ? (
+                  {project.key_requirements && project.key_requirements.length > 0 ? (
                     <ul className="list-disc list-inside text-sm text-neutral-800/80 dark:text-neutral-200/80 space-y-1 mb-4">
-                      {project.keyRequirements.map((requirement, index) => (
+                      {project.key_requirements?.map((requirement, index) => (
                         <li key={index}>{requirement}</li>
                       ))}
                     </ul>
@@ -505,7 +506,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                 <Card className="bg-white dark:bg-neutral-900/30 shadow-sm border border-neutral-200/50 dark:border-neutral-800/50 p-4 mb-6">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-lg font-bold font-sf-pro">{t('scenario')}</h3>
-                    <StatusBadge status={project.workflowStage === 'scenario' ? 'pending' : 'completed'} />
+                    <StatusBadge status={project.workflow_stage === 'scenario' ? 'pending' : 'completed'} />
                   </div>
                   
 {isLoadingScenarios ? (
@@ -527,18 +528,15 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                       {scenarios.map((scenario, index) => (
                         <div key={scenario.id} className={`py-3 ${index > 0 ? 'border-t border-neutral-200/50 dark:border-neutral-800/50' : ''}`}>
                           <div className="flex justify-between mb-2">
-                            <div className="font-medium">
-                              {t('scenario')} {scenario.version > 1 ? `v${scenario.version}` : ''}
-                            </div>
                             <StatusBadge status={scenario.status as any} />
                           </div>
                           <div className="text-sm text-neutral-800/80 dark:text-neutral-200/80 mb-4 whitespace-pre-line">
                             {scenario.content}
                           </div>
-                          {scenario.googleDocUrl && (
+                          {scenario.google_doc_url && (
                             <div className="mt-2 mb-4">
                               <a
-                                href={scenario.googleDocUrl}
+                                href={scenario.google_doc_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-primary flex items-center text-sm"
@@ -630,7 +628,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                     
                     <div className="flex justify-between">
                       <div className="text-neutral-600/60 dark:text-neutral-400/60">{t('start_date')}</div>
-                      <div>{formatDate(project.startDate)}</div>
+                      <div>{formatDate(project.start_date)}</div>
                     </div>
                     
                     <div className="flex justify-between">
@@ -648,10 +646,10 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                       <div>{project.budget ? `${project.budget.toLocaleString()} ₽` : '-'}</div>
                     </div>
                     
-                    {project.technicalLinks && project.technicalLinks.length > 0 && (
+                    {project.technical_links && project.technical_links.length > 0 && (
                       <div className="border-t border-neutral-200/50 dark:border-neutral-800/50 pt-3">
                         <div className="text-neutral-600/60 dark:text-neutral-400/60 mb-2">{t('technical_links')}</div>
-                        {project.technicalLinks.map((link, index) => (
+                        {project.technical_links.map((link, index) => (
                           <a 
                             key={index} 
                             href={link.url} 
@@ -732,33 +730,33 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                             <div>
                               <div className="font-medium">{influencer.nickname}</div>
                               <div className="text-xs text-neutral-600/60 dark:text-neutral-400/60">
-                                @{influencer.instagramHandle || influencer.nickname}
+                                @{influencer.instagram_handle || influencer.nickname}
                               </div>
                             </div>
                           </div>
                           
                           <div className="flex items-center">
-                            {influencer.instagramHandle && (
+                            {influencer.instagram_handle && (
                               <div className="flex items-center">
                                 <SocialIcon platform="instagram" size="sm" className="mr-1" />
                                 <div className="text-xs">
-                                  {influencer.instagramFollowers ? 
-                                    (influencer.instagramFollowers > 1000 ? 
-                                      `${Math.floor(influencer.instagramFollowers / 1000)}K` : 
-                                      influencer.instagramFollowers) : 
+                                  {influencer.instagram_followers ? 
+                                    (influencer.instagram_followers > 1000 ? 
+                                      `${Math.floor(influencer.instagram_followers / 1000)}K` : 
+                                      influencer.instagram_followers) : 
                                     '-'}
                                 </div>
                               </div>
                             )}
                             
-                            {influencer.tiktokHandle && (
+                            {influencer.tiktok_handle && (
                               <div className="flex items-center ml-2">
                                 <SocialIcon platform="tiktok" size="sm" className="mr-1" />
                                 <div className="text-xs">
-                                  {influencer.tiktokFollowers ? 
-                                    (influencer.tiktokFollowers > 1000 ? 
-                                      `${Math.floor(influencer.tiktokFollowers / 1000)}K` : 
-                                      influencer.tiktokFollowers) : 
+                                  {influencer.tiktok_followers ? 
+                                    (influencer.tiktok_followers > 1000 ? 
+                                      `${Math.floor(influencer.tiktok_followers / 1000)}K` : 
+                                      influencer.tiktok_followers) : 
                                     '-'}
                                 </div>
                               </div>
@@ -845,7 +843,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                     
                     <div className="flex justify-between">
                       <div className="text-neutral-600/60 dark:text-neutral-400/60">{t('start_date')}</div>
-                      <div>{formatDate(project.startDate)}</div>
+                      <div>{formatDate(project.start_date)}</div>
                     </div>
                     
                     <div className="flex justify-between">
@@ -863,10 +861,10 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                       <div>{project.budget ? `${project.budget.toLocaleString()} ₽` : '-'}</div>
                     </div>
                     
-                    {project.technicalLinks && project.technicalLinks.length > 0 && (
+                    {project.technical_links && project.technical_links.length > 0 && (
                       <div className="border-t border-neutral-200/50 dark:border-neutral-800/50 pt-3">
                         <div className="text-neutral-600/60 dark:text-neutral-400/60 mb-2">{t('technical_links')}</div>
-                        {project.technicalLinks.map((link, index) => (
+                        {project.technical_links.map((link, index) => (
                           <a 
                             key={index} 
                             href={link.url} 
@@ -896,7 +894,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                 <Card className="bg-white dark:bg-neutral-900/30 shadow-sm border border-neutral-200/50 dark:border-neutral-800/50 p-4 mb-6">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-lg font-bold font-sf-pro">{t('publications')}</h3>
-                    {project.workflowStage === 'publication' ? (
+                    {project.workflow_stage === 'publication' ? (
                       <StatusBadge status="pending" />
                     ) : (
                       <StatusBadge status="draft" label={t('not_started')} className="bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300" />
@@ -904,7 +902,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                   </div>
                   
                   <div className="bg-neutral-100/50 dark:bg-neutral-900/50 rounded-lg p-4 mb-4">
-                    {project.workflowStage === 'publication' ? (
+                    {project.workflow_stage === 'publication' ? (
                       <div>
                         <h4 className="font-medium mb-3">{t('add_publication_links')}</h4>
                         <div className="space-y-4 mb-4">
@@ -969,7 +967,7 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                     
                     <div className="flex justify-between">
                       <div className="text-neutral-600/60 dark:text-neutral-400/60">{t('start_date')}</div>
-                      <div>{formatDate(project.startDate)}</div>
+                      <div>{formatDate(project.start_date)}</div>
                     </div>
                     
                     <div className="flex justify-between">
@@ -987,10 +985,10 @@ export default function ProjectDetail({ id }: ProjectDetailProps) {
                       <div>{project.budget ? `${project.budget.toLocaleString()} ₽` : '-'}</div>
                     </div>
                     
-                    {project.technicalLinks && project.technicalLinks.length > 0 && (
+                    {project.technical_links && project.technical_links.length > 0 && (
                       <div className="border-t border-neutral-200/50 dark:border-neutral-800/50 pt-3">
                         <div className="text-neutral-600/60 dark:text-neutral-400/60 mb-2">{t('technical_links')}</div>
-                        {project.technicalLinks.map((link, index) => (
+                        {project.technical_links.map((link, index) => (
                           <a 
                             key={index} 
                             href={link.url} 

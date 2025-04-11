@@ -1,5 +1,3 @@
-import { Card } from "@/components/ui/card";
-import { Avatar } from "@/components/ui/avatar";
 import { useTranslation } from "react-i18next";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
@@ -7,8 +5,7 @@ import {
   FileText, 
   AlertCircle, 
   CheckCircle, 
-  Image, 
-  Video,
+  Image,
   Share2, 
   Plus
 } from "lucide-react";

@@ -11,12 +11,12 @@ import InfluencerDashboard from "@/pages/influencer-dashboard";
 import Influencers from "@/pages/influencers";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
-import { useAuth } from "@/hooks/use-auth";
-import { useTranslation } from "react-i18next";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useAuthStore } from "@/contexts/auth";
+import { useEffect } from "react";
 
 function Router() {
-  const { user } = useAuth();
+  const user = useAuthStore((state) => state.user);
   
   return (
     <Switch>
@@ -68,7 +68,13 @@ function Router() {
   );
 }
 
-function App() {
+export default function App() {
+  const initialize = useAuthStore((state) => state.initialize);
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router />
@@ -76,5 +82,3 @@ function App() {
     </QueryClientProvider>
   );
 }
-
-export default App;

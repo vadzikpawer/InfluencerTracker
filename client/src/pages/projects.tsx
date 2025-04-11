@@ -16,6 +16,8 @@ import {
 import { Search, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { projects as projectsApi } from "@/lib/api";
+import { Project } from "@/lib/types";
 
 export default function Projects() {
   const { t } = useTranslation();
@@ -23,20 +25,21 @@ export default function Projects() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
   
-  const { data: projects, isLoading } = useQuery({
-    queryKey: ["/api/projects"],
+  const { data: projects, isLoading } = useQuery<Project[]>({
+    queryKey: ["projects"],
+    queryFn: async (): Promise<Project[]> => projectsApi.list()
   });
 
-  const filteredProjects = projects?.filter(project => {
+  const filteredProjects = projects?.filter((project: Project) => {
     // Filter by search term
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.client.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Filter by status
     const matchesStatus = statusFilter === "all" || project.status === statusFilter ||
-      (statusFilter === "scenario" && project.workflowStage === "scenario") ||
-      (statusFilter === "material" && project.workflowStage === "material") ||
-      (statusFilter === "publication" && project.workflowStage === "publication");
+      (statusFilter === "scenario" && project.workflow_stage === "scenario") ||
+      (statusFilter === "material" && project.workflow_stage === "material") ||
+      (statusFilter === "publication" && project.workflow_stage === "publication");
     
     // Filter by platform
     const matchesPlatform = platformFilter === "all" || 
@@ -122,10 +125,10 @@ export default function Projects() {
               title={project.title}
               client={project.client}
               status={project.status}
-              workflowStage={project.workflowStage}
+              workflowStage={project.workflow_stage}
               platforms={project.platforms || []}
               scenarioStatus="approved"
-              materialStatus={project.workflowStage === "material" ? "in_review" : "pending"}
+              materialStatus={project.workflow_stage === "material" ? "in_review" : "pending"}
               publicationStatus="pending"
               deadline={project.deadline ? new Date(project.deadline) : undefined}
               influencers={[{ initials: "ЕК", name: "Екатерина Котова" }]}

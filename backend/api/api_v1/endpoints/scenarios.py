@@ -91,4 +91,4 @@ def delete_scenario(
     
     db.delete(db_scenario)
     db.commit()
-    return {"message": "Scenario deleted successfully"} 
+    return {"message": "Scenario deleted successfully"}

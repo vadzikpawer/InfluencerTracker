@@ -38,19 +38,13 @@ export default function Login() {
     },
   });
 
-  const onSubmit = async (values: LoginFormValues) => {
-    setIsLoading(true);
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      await login(values.username, values.password);
+      await login(form.getValues('username'), form.getValues('password'));
       setLocation('/');
     } catch (error) {
-      toast({
-        title: t("login_failed"),
-        description: t("invalid_credentials"),
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+      console.error('Login failed:', error);
     }
   };
 
@@ -64,7 +58,7 @@ export default function Login() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={onSubmit} className="space-y-4">
               <FormField
                 control={form.control}
                 name="username"

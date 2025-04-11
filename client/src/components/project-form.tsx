@@ -14,13 +14,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, CalendarIcon } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
+import { projects } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { ProjectStatus, WorkflowStage } from "@/lib/types";
 
 // Extend the schema to add validation
 const formSchema = insertProjectSchema.extend({
@@ -52,7 +54,7 @@ const platformOptions = [
 export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [location, navigate] = useLocation();
+  const [_, navigate] = useLocation();
   const { user } = useAuth();
   const [technicalLinkInput, setTechnicalLinkInput] = useState({ title: "", url: "" });
   const [keyRequirementInput, setKeyRequirementInput] = useState("");
@@ -81,9 +83,8 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
   });
 
   const createProjectMutation = useMutation({
-    mutationFn: async (data: FormValues) => {
-      const res = await apiRequest("POST", "/api/projects", data);
-      return await res.json();
+    mutationFn: async (data: any) => {
+      return await projects.create(data);
     },
     onSuccess: (data) => {
       toast({
@@ -103,9 +104,8 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
   });
 
   const updateProjectMutation = useMutation({
-    mutationFn: async (data: FormValues) => {
-      const res = await apiRequest("PATCH", `/api/projects/${project.id}`, data);
-      return await res.json();
+    mutationFn: async (data: any) => {
+      return await projects.update(project.id, data);
     },
     onSuccess: (data) => {
       toast({
@@ -126,20 +126,29 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
   });
 
   function onSubmit(data: FormValues) {
-    // Create a new data object with properly formatted dates
-    const formattedData = {
-      ...data,
-      // Convert date strings to Date objects if they exist
-      deadline: data.deadline ? new Date(data.deadline) : null,
-      scenarioDeadline: data.scenarioDeadline ? new Date(data.scenarioDeadline) : null,
-      materialDeadline: data.materialDeadline ? new Date(data.materialDeadline) : null,
-      publicationDeadline: data.publicationDeadline ? new Date(data.publicationDeadline) : null,
+    // Transform camelCase to snake_case fields for API
+    const transformedData: any = {
+      title: data.title,
+      client: data.client,
+      description: data.description || "",
+      key_requirements: data.keyRequirements || [],
+      platforms: data.platforms || [],
+      budget: data.budget,
+      manager_id: data.managerId || (user?.id as number),
+      technical_links: data.technicalLinks || [],
+      deadline: data.deadline ? new Date(data.deadline as any).toISOString() : null,
+      scenario_deadline: data.scenarioDeadline ? new Date(data.scenarioDeadline as any).toISOString() : null,
+      material_deadline: data.materialDeadline ? new Date(data.materialDeadline as any).toISOString() : null,
+      publication_deadline: data.publicationDeadline ? new Date(data.publicationDeadline as any).toISOString() : null,
+      status: ProjectStatus.ACTIVE,
+      workflow_stage: WorkflowStage.SCENARIO,
+      start_date: new Date().toISOString(),
     };
 
     if (isNew) {
-      createProjectMutation.mutate(formattedData);
+      createProjectMutation.mutate(transformedData);
     } else {
-      updateProjectMutation.mutate(formattedData);
+      updateProjectMutation.mutate(transformedData);
     }
   }
 
@@ -300,7 +309,7 @@ export function ProjectForm({ project, isNew = false }: ProjectFormProps) {
                       type="number" 
                       {...field} 
                       placeholder={t("enter_budget")} 
-                      value={field.value || ""}
+                      value={typeof field.value === 'number' ? field.value : ''} 
                       onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : undefined)}
                     />
                   </FormControl>
