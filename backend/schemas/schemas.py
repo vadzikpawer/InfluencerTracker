@@ -5,7 +5,7 @@ from models.models import UserRole, ProjectStatus, WorkflowStage
 
 class UserBase(BaseModel):
     username: str
-    email: str
+    email: Optional[str] = None
     name: Optional[str] = None
     role: UserRole
     profile_image: Optional[str] = None
@@ -53,6 +53,7 @@ class InfluencerCreate(InfluencerBase):
         from_attributes = True
 
 class InfluencerUpdate(InfluencerBase):
+    manager_id: Optional[int] = None
     class Config:
         from_attributes = True
 

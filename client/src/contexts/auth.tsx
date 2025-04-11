@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { auth } from '@/lib/api';
 import { User, UserRole } from '@/lib/types';
+import { useLocation } from 'wouter';
 
 interface AuthState {
   user: User | null;
@@ -19,14 +20,19 @@ export const useAuthStore = create<AuthState>((set) => ({
     const response = await auth.login(username, password);
     localStorage.setItem('token', response.access_token);
     set({ token: response.access_token, isAuthenticated: true });
+    const [, setLocation] = useLocation();
+    setLocation('/');
   },
   register: async (username: string, password: string, name: string, role: UserRole) => {
-    const response = await auth.register(username, password, name);
+    const response = await auth.register(username, password, name, role);
     localStorage.setItem('token', response.access_token);
-    set({ token: response.access_token, isAuthenticated: true });
+    set({ token: response.access_token, isAuthenticated: true, user: response.user });
+    const [, setLocation] = useLocation();
+    setLocation('/');
   },
   logout: () => {
     localStorage.removeItem('token');
     set({ user: null, token: null, isAuthenticated: false });
+    const [, setLocation] = useLocation();
   },
 })); 

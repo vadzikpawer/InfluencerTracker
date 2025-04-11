@@ -10,13 +10,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export default function Login() {
   const { t } = useTranslation();
   const { login } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [, setLocation] = useLocation();
 
   const loginSchema = z.object({
     username: z.string().min(1, {
@@ -41,6 +42,7 @@ export default function Login() {
     setIsLoading(true);
     try {
       await login(values.username, values.password);
+      setLocation('/');
     } catch (error) {
       toast({
         title: t("login_failed"),

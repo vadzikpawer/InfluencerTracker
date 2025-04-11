@@ -25,7 +25,6 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     password = Column(String)
     name = Column(String)
-    email = Column(String)
     role = Column(Enum(UserRole))
     profile_image = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -9,6 +9,7 @@ interface LoginResponse {
 interface RegisterResponse {
   access_token: string;
   token_type: string;
+  user: User;
 }
 
 const api = axios.create({
@@ -29,11 +30,29 @@ api.interceptors.request.use((config: any) => {
 
 export const auth = {
   login: async (username: string, password: string): Promise<LoginResponse> => {
-    const response = await api.post<LoginResponse>('/auth/login', { username, password });
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('password', password);
+    
+    const response = await api.post<LoginResponse>('/auth/login', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
-  register: async (username: string, password: string, name: string): Promise<RegisterResponse> => {
-    const response = await api.post<RegisterResponse>('/auth/register', { username, password, name });
+  register: async (username: string, password: string, name: string, role: string): Promise<RegisterResponse> => {
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('password', password);
+    formData.append('name', name);
+    formData.append('role', role);
+    
+    const response = await api.post<RegisterResponse>('/auth/register', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 };

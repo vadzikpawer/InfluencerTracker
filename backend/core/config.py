@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # Database
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "localhost")
     POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
-    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "password")
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "influencertracker")
     
     # Set DATABASE_URL based on the TESTING environment variable
@@ -26,7 +26,6 @@ class Settings(BaseSettings):
             "DATABASE_URL",
             f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}/{POSTGRES_DB}"
         )
-    print(TESTING)
     # JWT
     SECRET_KEY: str = os.getenv("SECRET_KEY", "a-very-secret-key-for-testing" if TESTING else os.environ.get("SECRET_KEY"))
     ALGORITHM: str = "HS256"

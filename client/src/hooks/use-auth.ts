@@ -1,16 +1,21 @@
 import { useAuthStore } from "@/contexts/auth";
+import { useEffect, useState } from "react";
 
 console.log('Loading use-auth hook with Zustand store');
 
 export const useAuth = () => {
   const { user, isAuthenticated, login, logout, register } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(true);
   
-  console.log('Auth state:', { user, isAuthenticated });
+  useEffect(() => {
+    // Set loading to false after mount
+    setIsLoading(false);
+  }, []);
   
   return {
     user,
     isAuthenticated,
-    isLoading: false,
+    isLoading,
     login,
     logout,
     register

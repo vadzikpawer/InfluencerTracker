@@ -10,13 +10,15 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { UserRole } from "@/lib/types";
 
 export default function Register() {
   const { t } = useTranslation();
   const { register } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [, setLocation] = useLocation();
 
   const registerSchema = z.object({
     username: z.string().min(1, {
@@ -28,7 +30,7 @@ export default function Register() {
     name: z.string().min(1, {
       message: t("name_required"),
     }),
-    role: z.enum(["manager", "influencer"], {
+    role: z.nativeEnum(UserRole, {
       required_error: t("role_required"),
     }),
   });
@@ -49,6 +51,7 @@ export default function Register() {
     setIsLoading(true);
     try {
       await register(values.username, values.password, values.name, values.role);
+      setLocation('/');
     } catch (error) {
       // Error is handled by the auth context
     } finally {
@@ -135,8 +138,8 @@ export default function Register() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="manager">{t("manager")}</SelectItem>
-                        <SelectItem value="influencer">{t("influencer")}</SelectItem>
+                        <SelectItem value={UserRole.MANAGER}>{t("manager")}</SelectItem>
+                        <SelectItem value={UserRole.INFLUENCER}>{t("influencer")}</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

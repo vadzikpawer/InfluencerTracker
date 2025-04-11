@@ -13,21 +13,7 @@ import Login from "@/pages/login";
 import Register from "@/pages/register";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
-
-function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType<any>, [key: string]: any }) {
-  const { user, isLoading } = useAuth();
-  const { t } = useTranslation();
-  
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">{t("loading")}</div>;
-  }
-  
-  if (!user) {
-    return <Login />;
-  }
-  
-  return <Component {...rest} />;
-}
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 function Router() {
   const { user } = useAuth();
@@ -38,30 +24,43 @@ function Router() {
       <Route path="/register" component={Register} />
       
       <Route path="/">
-        {user?.role === "manager" ? 
-          <ProtectedRoute component={Dashboard} /> : 
-          <ProtectedRoute component={InfluencerDashboard} />
-        }
+        <ProtectedRoute>
+          {user?.role === "manager" ? <Dashboard /> : <InfluencerDashboard />}
+        </ProtectedRoute>
       </Route>
       
       <Route path="/projects">
-        <ProtectedRoute component={Projects} />
+        <ProtectedRoute>
+          <Projects />
+        </ProtectedRoute>
       </Route>
       
       <Route path="/projects/new">
-        <ProtectedRoute component={ProjectFormPage} id="new" />
+        <ProtectedRoute>
+          <ProjectFormPage id="new" />
+        </ProtectedRoute>
       </Route>
       
       <Route path="/projects/:id/edit">
-        {(params) => <ProtectedRoute component={ProjectFormPage} id={params.id} />}
+        {(params) => (
+          <ProtectedRoute>
+            <ProjectFormPage id={params.id} />
+          </ProtectedRoute>
+        )}
       </Route>
       
       <Route path="/projects/:id">
-        {(params) => <ProtectedRoute component={ProjectDetail} id={params.id} />}
+        {(params) => (
+          <ProtectedRoute>
+            <ProjectDetail id={params.id} />
+          </ProtectedRoute>
+        )}
       </Route>
       
       <Route path="/influencers">
-        <ProtectedRoute component={Influencers} />
+        <ProtectedRoute>
+          <Influencers />
+        </ProtectedRoute>
       </Route>
       
       <Route component={NotFound} />

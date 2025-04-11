@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'wouter';
 import { useAuthStore } from '@/contexts/auth';
 import { ReactNode } from 'react';
 
@@ -8,10 +8,11 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated } = useAuthStore();
-  const location = useLocation();
+  const [, setLocation] = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    setLocation('/login');
+    return null;
   }
 
   return <>{children}</>;
